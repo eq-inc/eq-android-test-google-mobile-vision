@@ -8,7 +8,9 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.PointF;
+import android.graphics.Region;
 import android.media.ExifInterface;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -129,24 +131,32 @@ public class FaceDetectFromPhotoFragment extends Fragment implements View.OnClic
             mProgressDialog.show();
 
             FaceDetector.Builder builder = new FaceDetector.Builder(activity);
+
+            // classification
             SwitchCompat tempSwitch = (SwitchCompat) activity.findViewById(R.id.scClassification);
             if (tempSwitch.isChecked()) {
                 builder.setClassificationType(FaceDetector.ALL_CLASSIFICATIONS);
             } else {
                 builder.setClassificationType(FaceDetector.NO_CLASSIFICATIONS);
             }
+
+            // landmark
             tempSwitch = (SwitchCompat) activity.findViewById(R.id.scLandmark);
             if (tempSwitch.isChecked()) {
                 builder.setLandmarkType(FaceDetector.ALL_LANDMARKS);
             } else {
                 builder.setLandmarkType(FaceDetector.NO_LANDMARKS);
             }
+
+            // mode
             tempSwitch = (SwitchCompat) activity.findViewById(R.id.scDetectMode);
             if (tempSwitch.isChecked()) {
                 builder.setMode(FaceDetector.FAST_MODE);
             } else {
                 builder.setMode(FaceDetector.ACCURATE_MODE);
             }
+
+            // prominent face only
             tempSwitch = (SwitchCompat) activity.findViewById(R.id.scProminentFaceOnly);
             builder.setProminentFaceOnly(tempSwitch.isChecked());
 
@@ -199,6 +209,7 @@ public class FaceDetectFromPhotoFragment extends Fragment implements View.OnClic
                                 Paint linePaint = new Paint();
                                 linePaint.setARGB(100, 255, 0, 0);
                                 linePaint.setStrokeWidth(activity.getResources().getDimensionPixelSize(R.dimen.face_line_width));
+                                float lineWidth = linePaint.getStrokeWidth();
                                 Paint facePartPaint = new Paint();
                                 facePartPaint.setARGB(100, 0, 255, 0);
                                 facePartPaint.setStrokeWidth(activity.getResources().getDimensionPixelSize(R.dimen.landmark_point_size));
@@ -217,13 +228,12 @@ public class FaceDetectFromPhotoFragment extends Fragment implements View.OnClic
                                 if(faceRightBottomPointF.y > fullImageCanvas.getHeight()){
                                     faceRightBottomPointF.y = fullImageCanvas.getHeight();
                                 }
-                                float[] facePoints = new float[]{
-                                        faceLeftTopPointF.x, faceLeftTopPointF.y, faceRightBottomPointF.x, faceLeftTopPointF.y,
-                                        faceRightBottomPointF.x, faceLeftTopPointF.y, faceRightBottomPointF.x, faceRightBottomPointF.y,
-                                        faceRightBottomPointF.x, faceRightBottomPointF.y, faceLeftTopPointF.x, faceRightBottomPointF.y,
-                                        faceLeftTopPointF.x, faceRightBottomPointF.y, faceLeftTopPointF.x, faceLeftTopPointF.y,
-                                };
-                                fullImageCanvas.drawLines(facePoints, linePaint);
+                                Path clipPath = new Path();
+                                fullImageCanvas.save();
+                                clipPath.addRect(faceLeftTopPointF.x + lineWidth,faceLeftTopPointF.y + lineWidth, faceRightBottomPointF.x - lineWidth, faceRightBottomPointF.y - lineWidth, Path.Direction.CW);
+                                fullImageCanvas.clipPath(clipPath, Region.Op.DIFFERENCE);
+                                fullImageCanvas.drawRect(faceLeftTopPointF.x,faceLeftTopPointF.y, faceRightBottomPointF.x, faceRightBottomPointF.y, linePaint);
+                                fullImageCanvas.restore();
 
                                 builder.append("Face ID: ").append(detectedFace.getId()).append("\n");
 
@@ -272,11 +282,23 @@ public class FaceDetectFromPhotoFragment extends Fragment implements View.OnClic
                                         }
 
                                         PointF landmarkPosition = faceLandmark.getPosition();
-                                        builder.append(landmarkPosition).append("\n");
+                                        builder.append(String.format("%.3f", landmarkPosition.x)).append(",").append(String.format("%.3f", landmarkPosition.y)).append("\n");
 
                                         fullImageCanvas.drawPoint(landmarkPosition.x, landmarkPosition.y, facePartPaint);
                                     }
                                 }
+
+                                if(detectedFace.getIsLeftEyeOpenProbability() != Face.UNCOMPUTED_PROBABILITY){
+                                    builder.append(" left eye is opend: ").append(String.format("%.3f", detectedFace.getIsLeftEyeOpenProbability())).append("\n");
+                                }
+                                if(detectedFace.getIsRightEyeOpenProbability() != Face.UNCOMPUTED_PROBABILITY){
+                                    builder.append(" right eye is opend: ").append(String.format("%.3f", detectedFace.getIsRightEyeOpenProbability())).append("\n");
+                                }
+                                if(detectedFace.getIsSmilingProbability() != Face.UNCOMPUTED_PROBABILITY){
+                                    builder.append(" smiling: ").append(String.format("%.3f", detectedFace.getIsSmilingProbability())).append("\n");
+                                }
+
+                                builder.append(" face angleYZ: ").append(String.format("%.3f", detectedFace.getEulerY())).append(",").append(String.format("%.3f", detectedFace.getEulerZ())).append("\n");
                             }
                         }
                     }
