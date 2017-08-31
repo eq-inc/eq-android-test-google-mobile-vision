@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:weightSum="1.0"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent">
+
+    <ScrollView
+        android:layout_weight="0.2"
+        android:layout_width="match_parent"
+        android:layout_height="0dp">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+            <android.support.v7.widget.SwitchCompat
+                android:id="@+id/scClassification"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/classification"
+                android:textOn="@string/all_classification"
+                android:textOff="@string/no_classification"/>
+            <android.support.v7.widget.SwitchCompat
+                android:id="@+id/scLandmark"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/landmark"
+                android:textOn="@string/all_landmark"
+                android:textOff="@string/no_landmark"/>
+            <android.support.v7.widget.SwitchCompat
+                android:id="@+id/scDetectMode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/detect_mode"
+                android:textOn="@string/detect_mode_fast"
+                android:textOff="@string/detect_mode_accurate"/>
+            <android.support.v7.widget.SwitchCompat
+                android:id="@+id/scProminentFaceOnly"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/prominent_face_only"
+                android:textOn=""
+                android:textOff=""/>
+        </LinearLayout>
+    </ScrollView>
+
+    <FrameLayout
+        android:id="@+id/flFragment"
+        android:layout_weight="0.8"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"></FrameLayout>
+</LinearLayout>
