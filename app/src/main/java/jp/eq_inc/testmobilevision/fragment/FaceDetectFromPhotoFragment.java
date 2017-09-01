@@ -2,21 +2,16 @@ package jp.eq_inc.testmobilevision.fragment;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
-import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.PointF;
-import android.graphics.Region;
 import android.media.ExifInterface;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SwitchCompat;
@@ -25,6 +20,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.google.android.gms.vision.Frame;
@@ -38,12 +34,11 @@ import java.util.List;
 import jp.eq_inc.testmobilevision.R;
 import jp.eq_inc.testmobilevision.adapter.ImageAdapter;
 
-public class FaceDetectFromPhotoFragment extends Fragment implements View.OnClickListener {
-    private OnFragmentInteractionListener mListener;
-    private ImageAdapter mImageAdapter;
+public class FaceDetectFromPhotoFragment extends AbstractFaceDetectFragment implements View.OnClickListener {
     private Bitmap mDetectedBitmap;
     private ImageView mDetectedIv;
     private TextView mDetectedInformationTv;
+    private Long mCurrentSelectedId = null;
 
     public FaceDetectFromPhotoFragment() {
         // Required empty public constructor
@@ -74,45 +69,27 @@ public class FaceDetectFromPhotoFragment extends Fragment implements View.OnClic
         RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.rcPhotoList);
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(activity, LinearLayoutManager.HORIZONTAL, true);
         recyclerView.setLayoutManager(layoutManager);
-        mImageAdapter = new ImageAdapter(activity);
-        mImageAdapter.setOnItemClickListener(this);
-        recyclerView.setAdapter(mImageAdapter);
+        mItemAdapter = new ImageAdapter(activity);
+        mItemAdapter.setOnItemClickListener(this);
+        recyclerView.setAdapter(mItemAdapter);
 
         return view;
     }
 
     @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        if (context instanceof OnFragmentInteractionListener) {
-            mListener = (OnFragmentInteractionListener) context;
-        } else {
-            throw new RuntimeException(context.toString()
-                    + " must implement OnFragmentInteractionListener");
-        }
-    }
-
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        mListener = null;
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-
-        if (mImageAdapter != null) {
-            mImageAdapter.updateAsync();
-        }
-    }
-
-    @Override
     public void onClick(View v) {
         ImageAdapter.InnerViewHolder holder = (ImageAdapter.InnerViewHolder) v.getTag(ImageAdapter.ViewTagHolder);
-        int currentPosition = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1 ? holder.getAdapterPosition() : holder.getPosition();
+        int currentPosition = getAdapterPosition(holder);
         FaceDetectTask task = new FaceDetectTask();
-        task.execute(mImageAdapter.getItemId(currentPosition));
+        task.execute(mCurrentSelectedId = mItemAdapter.getItemId(currentPosition));
+    }
+
+    @Override
+    public void changeFaceDetectParams() {
+        if(mCurrentSelectedId != null){
+            FaceDetectTask task = new FaceDetectTask();
+            task.execute(mCurrentSelectedId);
+        }
     }
 
     private class FaceDetectTask extends AsyncTask<Long, Void, Boolean> {
@@ -120,6 +97,7 @@ public class FaceDetectFromPhotoFragment extends Fragment implements View.OnClic
         private StringBuilder mReservedDetectedInformation;
         private ProgressDialog mProgressDialog;
         private FaceDetector mFaceDetector;
+        private Integer mSelectedRotation = null;
 
         @Override
         protected void onPreExecute() {
@@ -160,6 +138,10 @@ public class FaceDetectFromPhotoFragment extends Fragment implements View.OnClic
             tempSwitch = (SwitchCompat) activity.findViewById(R.id.scProminentFaceOnly);
             builder.setProminentFaceOnly(tempSwitch.isChecked());
 
+            // rotation
+            Spinner rotationSpinner = (Spinner) activity.findViewById(R.id.spnrRotation);
+            mSelectedRotation = (Integer) rotationSpinner.getSelectedItem();
+
             mFaceDetector = builder.build();
         }
 
@@ -179,107 +161,58 @@ public class FaceDetectFromPhotoFragment extends Fragment implements View.OnClic
                         options.inMutable = true;
                         Bitmap fullImage = mReservedDetectedBitmap = BitmapFactory.decodeFile(imagePath, options);
                         Canvas fullImageCanvas = new Canvas(fullImage);
+                        int imageWidth = fullImageCanvas.getWidth();
+                        int imageHeight = fullImageCanvas.getHeight();
                         int rotation = Frame.ROTATION_0;
 
-                        try {
-                            ExifInterface exifInterface = new ExifInterface(imagePath);
-                            int orientation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-                            switch (orientation) {
-                                case ExifInterface.ORIENTATION_ROTATE_90:
-                                    rotation = Frame.ROTATION_90;
-                                    break;
-                                case ExifInterface.ORIENTATION_ROTATE_180:
-                                    rotation = Frame.ROTATION_180;
-                                    break;
-                                case ExifInterface.ORIENTATION_ROTATE_270:
-                                    rotation = Frame.ROTATION_270;
-                                    break;
+                        if (mSelectedRotation == null) {
+                            try {
+                                ExifInterface exifInterface = new ExifInterface(imagePath);
+                                int orientation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+                                switch (orientation) {
+                                    case ExifInterface.ORIENTATION_ROTATE_90:
+                                        rotation = Frame.ROTATION_90;
+                                        break;
+                                    case ExifInterface.ORIENTATION_ROTATE_180:
+                                        rotation = Frame.ROTATION_180;
+                                        break;
+                                    case ExifInterface.ORIENTATION_ROTATE_270:
+                                        rotation = Frame.ROTATION_270;
+                                        break;
+                                }
+                            } catch (IOException e) {
                             }
-                        } catch (IOException e) {
+                        } else {
+                            rotation = mSelectedRotation;
                         }
+
+                        // canvasを画像の回転状態に合わせて回転・移動させる
+                        changeCanvasPosition(fullImageCanvas, rotation);
 
                         Frame fullImageFrame = new Frame.Builder().setBitmap(fullImage).setRotation(rotation).build();
                         SparseArray<Face> detectedFaceArray = mFaceDetector.detect(fullImageFrame);
                         if (detectedFaceArray != null) {
                             StringBuilder builder = mReservedDetectedInformation = new StringBuilder();
+                            Paint linePaint = new Paint();
+                            Paint facePartPaint = new Paint();
+
+                            linePaint.setARGB(100, 255, 0, 0);
+                            linePaint.setStrokeWidth(activity.getResources().getDimensionPixelSize(R.dimen.face_line_width));
+                            facePartPaint.setARGB(100, 0, 255, 0);
+                            facePartPaint.setStrokeWidth(activity.getResources().getDimensionPixelSize(R.dimen.landmark_point_size));
 
                             for (int i = 0, size = detectedFaceArray.size(); i < size; i++) {
                                 Face detectedFace = detectedFaceArray.valueAt(i);
 
-                                Paint linePaint = new Paint();
-                                linePaint.setARGB(100, 255, 0, 0);
-                                linePaint.setStrokeWidth(activity.getResources().getDimensionPixelSize(R.dimen.face_line_width));
-                                float lineWidth = linePaint.getStrokeWidth();
-                                Paint facePartPaint = new Paint();
-                                facePartPaint.setARGB(100, 0, 255, 0);
-                                facePartPaint.setStrokeWidth(activity.getResources().getDimensionPixelSize(R.dimen.landmark_point_size));
-
-                                PointF faceLeftTopPointF = detectedFace.getPosition();
-                                if(faceLeftTopPointF.x < 0){
-                                    faceLeftTopPointF.x = 0;
-                                }
-                                if(faceLeftTopPointF.y < 0){
-                                    faceLeftTopPointF.y = 0;
-                                }
-                                PointF faceRightBottomPointF = new PointF(faceLeftTopPointF.x + detectedFace.getWidth(), faceLeftTopPointF.y + detectedFace.getHeight());
-                                if(faceRightBottomPointF.x > fullImageCanvas.getWidth()){
-                                    faceRightBottomPointF.x = fullImageCanvas.getWidth();
-                                }
-                                if(faceRightBottomPointF.y > fullImageCanvas.getHeight()){
-                                    faceRightBottomPointF.y = fullImageCanvas.getHeight();
-                                }
-                                Path clipPath = new Path();
-                                fullImageCanvas.save();
-                                clipPath.addRect(faceLeftTopPointF.x + lineWidth,faceLeftTopPointF.y + lineWidth, faceRightBottomPointF.x - lineWidth, faceRightBottomPointF.y - lineWidth, Path.Direction.CW);
-                                fullImageCanvas.clipPath(clipPath, Region.Op.DIFFERENCE);
-                                fullImageCanvas.drawRect(faceLeftTopPointF.x,faceLeftTopPointF.y, faceRightBottomPointF.x, faceRightBottomPointF.y, linePaint);
-                                fullImageCanvas.restore();
+                                // 顔を囲う線を描画
+                                drawFaceLine(fullImageCanvas, detectedFace, linePaint, rotation);
 
                                 builder.append("Face ID: ").append(detectedFace.getId()).append("\n");
 
                                 List<Landmark> faceLandmarkList = detectedFace.getLandmarks();
-                                if(faceLandmarkList != null && faceLandmarkList.size() > 0){
-                                    for(Landmark faceLandmark : faceLandmarkList){
-                                        builder.append(" ");
-
-                                        switch(faceLandmark.getType()){
-                                            case Landmark.BOTTOM_MOUTH:
-                                                builder.append("bottom mouth: ");
-                                                break;
-                                            case Landmark.LEFT_CHEEK:
-                                                builder.append("left cheek: ");
-                                                break;
-                                            case Landmark.LEFT_EAR:
-                                                builder.append("left ear: ");
-                                                break;
-                                            case Landmark.LEFT_EAR_TIP:
-                                                builder.append("left ear tip: ");
-                                                break;
-                                            case Landmark.LEFT_EYE:
-                                                builder.append("left eye: ");
-                                                break;
-                                            case Landmark.LEFT_MOUTH:
-                                                builder.append("left mouth: ");
-                                                break;
-                                            case Landmark.NOSE_BASE:
-                                                builder.append("nose base: ");
-                                                break;
-                                            case Landmark.RIGHT_CHEEK:
-                                                builder.append("right cheek: ");
-                                                break;
-                                            case Landmark.RIGHT_EAR:
-                                                builder.append("right ear: ");
-                                                break;
-                                            case Landmark.RIGHT_EAR_TIP:
-                                                builder.append("right ear tip: ");
-                                                break;
-                                            case Landmark.RIGHT_EYE:
-                                                builder.append("right eye: ");
-                                                break;
-                                            case Landmark.RIGHT_MOUTH:
-                                                builder.append("right mouth: ");
-                                                break;
-                                        }
+                                if (faceLandmarkList != null && faceLandmarkList.size() > 0) {
+                                    for (Landmark faceLandmark : faceLandmarkList) {
+                                        builder.append(" ").append(getLandmarkTypeString(faceLandmark.getType())).append(": ");
 
                                         PointF landmarkPosition = faceLandmark.getPosition();
                                         builder.append(String.format("%.3f", landmarkPosition.x)).append(",").append(String.format("%.3f", landmarkPosition.y)).append("\n");
@@ -288,13 +221,13 @@ public class FaceDetectFromPhotoFragment extends Fragment implements View.OnClic
                                     }
                                 }
 
-                                if(detectedFace.getIsLeftEyeOpenProbability() != Face.UNCOMPUTED_PROBABILITY){
+                                if (detectedFace.getIsLeftEyeOpenProbability() != Face.UNCOMPUTED_PROBABILITY) {
                                     builder.append(" left eye is opend: ").append(String.format("%.3f", detectedFace.getIsLeftEyeOpenProbability())).append("\n");
                                 }
-                                if(detectedFace.getIsRightEyeOpenProbability() != Face.UNCOMPUTED_PROBABILITY){
+                                if (detectedFace.getIsRightEyeOpenProbability() != Face.UNCOMPUTED_PROBABILITY) {
                                     builder.append(" right eye is opend: ").append(String.format("%.3f", detectedFace.getIsRightEyeOpenProbability())).append("\n");
                                 }
-                                if(detectedFace.getIsSmilingProbability() != Face.UNCOMPUTED_PROBABILITY){
+                                if (detectedFace.getIsSmilingProbability() != Face.UNCOMPUTED_PROBABILITY) {
                                     builder.append(" smiling: ").append(String.format("%.3f", detectedFace.getIsSmilingProbability())).append("\n");
                                 }
 

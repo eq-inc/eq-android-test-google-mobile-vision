@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <dimen name="menu_padding_v">8dp</dimen>
     <dimen name="face_line_width">4dp</dimen>
     <dimen name="detect_item_padding">2dp</dimen>
     <dimen name="image_round_corner_size">4dp</dimen>
