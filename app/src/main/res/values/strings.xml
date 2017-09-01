@@ -11,7 +11,12 @@
     <string name="detect_mode_fast">Fast</string>
     <string name="detect_mode_accurate">Accurate</string>
     <string name="prominent_face_only">Prominent face only</string>
-
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="frame_rotation">Rotation</string>
+    <string-array name="frame_rotation_array">
+        <item>" "</item>
+        <item>0°</item>
+        <item>90°</item>
+        <item>180°</item>
+        <item>270°</item>
+    </string-array>
 </resources>

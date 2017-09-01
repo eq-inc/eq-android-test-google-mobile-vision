@@ -14,6 +14,9 @@ import com.google.android.gms.vision.face.FaceDetector;
 
 import java.util.ArrayList;
 
+import jp.co.thcomp.util.Constant;
+import jp.co.thcomp.util.LogUtil;
+
 abstract public class AbstractFaceDetectActivity extends AppCompatActivity {
     private static final int RequestCodeRuntimePermission = AbstractFaceDetectActivity.class.hashCode() & 0x0000FFFF;
     protected FaceDetector mFaceDetector;
@@ -24,6 +27,7 @@ abstract public class AbstractFaceDetectActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        LogUtil.logoutput(Constant.LOG_SWITCH.LOG_SWITCH_ERROR | Constant.LOG_SWITCH.LOG_SWITCH_WARNING | Constant.LOG_SWITCH.LOG_SWITCH_INFO | Constant.LOG_SWITCH.LOG_SWITCH_DEBUG);
         mMainLooperHandler = new Handler(Looper.getMainLooper());
 
         String[] runtimePermissions = getRuntimePermissions();

@@ -8,7 +8,8 @@
     <ScrollView
         android:layout_weight="0.2"
         android:layout_width="match_parent"
-        android:layout_height="0dp">
+        android:layout_height="0dp"
+        android:padding="4dp">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -41,6 +42,24 @@
                 android:text="@string/prominent_face_only"
                 android:textOn=""
                 android:textOff=""/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:weightSum="1.0">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/frame_rotation"/>
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="1dp" />
+                <Spinner
+                    android:id="@+id/spnrRotation"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.0"/>
+            </LinearLayout>
         </LinearLayout>
     </ScrollView>
 
