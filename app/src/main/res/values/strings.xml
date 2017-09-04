@@ -19,4 +19,8 @@
         <item>180°</item>
         <item>270°</item>
     </string-array>
+    <string name="auto_focus">Auto focus</string>
+    <string name="use_front_camera">Use front camera</string>
+    <string name="detect_fps">Frame rate per second</string>
+    <string name="default_detect_fps">30</string>
 </resources>
