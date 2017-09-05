@@ -69,6 +69,7 @@ public class FaceDetectActivity extends AbstractFaceDetectActivity implements On
             ((SwitchCompat) findViewById(R.id.scLandmark)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
             ((SwitchCompat) findViewById(R.id.scDetectMode)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
             ((SwitchCompat) findViewById(R.id.scProminentFaceOnly)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
+            ((SwitchCompat) findViewById(R.id.scFaceTracking)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
         }
     }
 

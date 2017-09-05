@@ -2,15 +2,16 @@ package jp.eq_inc.testmobilevision.fragment;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.pm.ActivityInfo;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.PorterDuff;
-import android.graphics.RectF;
 import android.os.Bundle;
 import android.support.v7.widget.SwitchCompat;
+import android.util.DisplayMetrics;
+import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.SurfaceView;
 import android.view.View;
@@ -49,6 +50,9 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
     private CameraSource mCameraSource;
     private Status mStatus = Status.Init;
     private HashMap<FaceTracker, Face> mDrawFaceMap = new HashMap<FaceTracker, Face>();
+    private int mReservedRequestedOrientation = 0;
+    private Size mRealPreviewSize = null;
+    private PointF mShownPreviewSize = new PointF();
 
     public FaceDetectFromCameraFragment() {
         // Required empty public constructor
@@ -92,6 +96,21 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
         stop();
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        Activity activity = getActivity();
+        mReservedRequestedOrientation = activity.getRequestedOrientation();
+        activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        getActivity().setRequestedOrientation(mReservedRequestedOrientation);
+    }
+
     private boolean initFaceDetector() {
         boolean ret = false;
 
@@ -132,6 +151,10 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
             tempSwitch = (SwitchCompat) activity.findViewById(R.id.scProminentFaceOnly);
             builder.setProminentFaceOnly(tempSwitch.isChecked());
 
+            // face tracking
+            tempSwitch = (SwitchCompat) activity.findViewById(R.id.scFaceTracking);
+            builder.setTrackingEnabled(tempSwitch.isChecked());
+
             mFaceDetector = builder.build();
             MultiProcessor.Builder<Face> multiProcessorBuilder = new MultiProcessor.Builder<Face>(mMultiProcessFactory);
             mFaceDetector.setProcessor(multiProcessorBuilder.build());
@@ -151,10 +174,13 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
             Activity activity = getActivity();
 
             if (mCameraSource != null) {
+                mCameraSource.stop();
                 mCameraSource.release();
                 mCameraSource = null;
             }
             CameraSource.Builder builder = new CameraSource.Builder(activity, mFaceDetector);
+
+            // previewサイズ
             builder.setRequestedPreviewSize(mCameraPreview.getWidth(), mCameraPreview.getHeight());
 
             // auto focus
@@ -177,6 +203,7 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
             } catch (NumberFormatException e) {
 
             }
+
             mCameraSource = builder.build();
 
             ret = true;
@@ -195,8 +222,7 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
                 if (initCameraSource()) {
                     try {
                         mCameraSource.start(mCameraPreview.getHolder());
-                        Size previewSize = mCameraSource.getPreviewSize();
-                        changePreviewSize(previewSize.getWidth(), previewSize.getHeight());
+                        mRealPreviewSize = mCameraSource.getPreviewSize();
                         ret = true;
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -222,6 +248,7 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
                 mCameraSource = null;
             }
 
+            mStatus = Status.Init;
             ret = true;
         }
 
@@ -234,6 +261,7 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
         String[] superRuntimePermissionArray = super.getRuntimePermissions();
 
         runtimePermissionList.add(Manifest.permission.CAMERA);
+        runtimePermissionList.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
         for (String superRuntimePermission : superRuntimePermissionArray) {
             runtimePermissionList.add(superRuntimePermission);
         }
@@ -243,9 +271,12 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
 
     @Override
     public void changeFaceDetectParams() {
+        // 一旦全てのインスタンスを解放
+        stop();
+        start();
     }
 
-    private void changePreviewSize(int width, int height){
+    private void changePreviewSize(int width, int height) {
         ViewGroup parentViewGroup = (ViewGroup) mCameraPreview.getParent();
         ViewGroup.LayoutParams cameraPreviewParams = mCameraPreview.getLayoutParams();
 
@@ -257,6 +288,8 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
         previewOverlayParams.width = width;
         previewOverlayParams.height = height;
         parentViewGroup.updateViewLayout(mPreviewOverlay, previewOverlayParams);
+
+        mShownPreviewSize.set(width, height);
     }
 
     private ViewTreeObserver.OnGlobalLayoutListener mParentViewGroupLayoutListener = new ViewTreeObserver.OnGlobalLayoutListener() {
@@ -267,10 +300,13 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
 
             mCameraPreview.getViewTreeObserver().addOnGlobalLayoutListener(mCameraPreviewLayoutListener);
             mPreviewOverlay.getViewTreeObserver().addOnGlobalLayoutListener(mPreviewOverlayLayoutListener);
-            ViewGroup.LayoutParams cameraPreviewParams = mCameraPreview.getLayoutParams();
+
+            DisplayMetrics metrics = new DisplayMetrics();
+            getActivity().getWindowManager().getDefaultDisplay().getMetrics(metrics);
+            float rate = ((float) metrics.heightPixels) / metrics.widthPixels;
 
             int previewWidth = parentViewGroup.getWidth();
-            int previewHeight = previewWidth * 3 / 4;
+            int previewHeight = (int) (previewWidth * rate);
             changePreviewSize(previewWidth, previewHeight);
         }
     };
@@ -303,20 +339,35 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
         public void onDraw(Canvas canvas) {
             canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
 
+            StringBuilder builder = new StringBuilder();
             for (Map.Entry<FaceTracker, Face> entry : mDrawFaceMap.entrySet()) {
                 FaceTracker tracker = entry.getKey();
 
                 if (tracker.mVisible) {
                     Face face = entry.getValue();
 
-                    RectF faceRect = new RectF(face.getPosition().x, face.getPosition().y, face.getPosition().x + face.getWidth(),face.getPosition().y + face.getHeight());
-                    LogUtil.d("GraphicOverlay.OnDrawListener", "face is in " + faceRect);
-                    LogUtil.d("GraphicOverlay.OnDrawListener", "preview size is " + mCameraSource.getPreviewSize());
+                    if (mRealPreviewSize != null) {
+                        float xRate = mShownPreviewSize.x / mRealPreviewSize.getWidth();
+                        float yRate = mShownPreviewSize.y / mRealPreviewSize.getHeight();
 
-                    tracker.mLinePaint.setARGB(100, face.getId() % 256, 0, 0);
-                    FaceDetectFromCameraFragment.this.drawFaceLine(canvas, face, tracker.mLinePaint, Frame.ROTATION_0);
+                        PointF facePosition = face.getPosition();
+                        FaceDetectFromCameraFragment.this.drawFaceLine(canvas, face.getId(), facePosition.x * xRate, facePosition.y * yRate, face.getWidth() * xRate, face.getHeight() * yRate, tracker.mLinePaint, Frame.ROTATION_0);
+                    }
+
+                    builder.append("ID: ").append(face.getId()).append("\n");
+                    if (face.getIsLeftEyeOpenProbability() > 0) {
+                        builder.append((face.getIsLeftEyeOpenProbability() * 100) + "% left eye is opened").append("\n");
+                    }
+                    if (face.getIsRightEyeOpenProbability() > 0) {
+                        builder.append((face.getIsRightEyeOpenProbability() * 100) + "% right eye is opened").append("\n");
+                    }
+                    if (face.getIsSmilingProbability() > 0) {
+                        builder.append((face.getIsSmilingProbability() * 100) + "% is smiled").append("\n");
+                    }
                 }
             }
+
+            mDetectedInformationTv.setText(builder.toString());
         }
     };
 
@@ -336,14 +387,25 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
             mVisible = true;
             mDrawFaceMap.put(this, face);
             mPreviewOverlay.postInvalidate();
+
+            // 顔毎に線色を変える。ただし、同じIDの人は同じ色にする
+            int id = face.getId();
+            int idModThree = id % 3;
+            if (idModThree == 0) {
+                mLinePaint.setARGB(100, 256 - id, 0, 0);
+            } else if (idModThree == 1) {
+                mLinePaint.setARGB(100, 0, 256 - id, 0);
+            } else {
+                mLinePaint.setARGB(100, 0, 0, 256 - id);
+            }
         }
 
         @Override
         public void onUpdate(Detector.Detections<Face> detections, Face face) {
             super.onUpdate(detections, face);
+
             mVisible = true;
             mDrawFaceMap.put(this, face);
-            LogUtil.d("", "metadata: " + detections.getFrameMetadata().getWidth() + ", " + detections.getFrameMetadata().getHeight());
             mPreviewOverlay.postInvalidate();
         }
 
@@ -351,6 +413,7 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
         public void onMissing(Detector.Detections<Face> detections) {
             super.onMissing(detections);
             mVisible = false;
+            mPreviewOverlay.postInvalidate();
         }
 
         @Override

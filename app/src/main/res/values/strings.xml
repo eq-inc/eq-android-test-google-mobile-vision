@@ -11,6 +11,9 @@
     <string name="detect_mode_fast">Fast</string>
     <string name="detect_mode_accurate">Accurate</string>
     <string name="prominent_face_only">Prominent face only</string>
+    <string name="face_tracking">Face tracking</string>
+    <string name="face_tracking_on">ON</string>
+    <string name="face_tracking_off">OFF</string>
     <string name="frame_rotation">Rotation</string>
     <string-array name="frame_rotation_array">
         <item>" "</item>
@@ -21,6 +24,6 @@
     </string-array>
     <string name="auto_focus">Auto focus</string>
     <string name="use_front_camera">Use front camera</string>
-    <string name="detect_fps">Frame rate per second</string>
+    <string name="detect_fps">detect per second</string>
     <string name="default_detect_fps">30</string>
 </resources>
