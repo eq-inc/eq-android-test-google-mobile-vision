@@ -1,10 +1,9 @@
 package jp.eq_inc.testmobilevision;
 
 import android.content.Intent;
-import android.os.Parcelable;
-import android.support.annotation.Size;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.os.Parcelable;
+import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -12,6 +11,7 @@ import android.widget.TextView;
 
 import java.io.Serializable;
 
+import jp.eq_inc.testmobilevision.fragment.FaceDetectFromCameraFragment;
 import jp.eq_inc.testmobilevision.fragment.FaceDetectFromMovieFragment;
 import jp.eq_inc.testmobilevision.fragment.FaceDetectFromPhotoFragment;
 
@@ -19,6 +19,7 @@ public class MainActivity extends AppCompatActivity {
     private static final MenuItem[] sMenuItemArray = new MenuItem[]{
             new MenuItem("Face Detect from Photo", FaceDetectActivity.class, new String[]{FaceDetectActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{FaceDetectFromPhotoFragment.class.getName()}),
             new MenuItem("Face Detect from Movie", FaceDetectActivity.class, new String[]{FaceDetectActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{FaceDetectFromMovieFragment.class.getName()}),
+            new MenuItem("Face Detect from Camera", FaceDetectFromCameraActivity.class, new String[]{FaceDetectFromCameraActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{FaceDetectFromCameraFragment.class.getName()}),
             //new MenuItem("Face Detect from Movie", FaceDetectFromMovieActivity.class),
             //new MenuItem("Face Detect from Camera", FaceDetectFromCameraActivity.class),
     };

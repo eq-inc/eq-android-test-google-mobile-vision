@@ -86,7 +86,7 @@ public class FaceDetectFromPhotoFragment extends AbstractFaceDetectFragment impl
 
     @Override
     public void changeFaceDetectParams() {
-        if(mCurrentSelectedId != null){
+        if (mCurrentSelectedId != null) {
             FaceDetectTask task = new FaceDetectTask();
             task.execute(mCurrentSelectedId);
         }
@@ -138,6 +138,10 @@ public class FaceDetectFromPhotoFragment extends AbstractFaceDetectFragment impl
             tempSwitch = (SwitchCompat) activity.findViewById(R.id.scProminentFaceOnly);
             builder.setProminentFaceOnly(tempSwitch.isChecked());
 
+            // face tracking
+            tempSwitch = (SwitchCompat) activity.findViewById(R.id.scFaceTracking);
+            builder.setTrackingEnabled(tempSwitch.isChecked());
+
             // rotation
             Spinner rotationSpinner = (Spinner) activity.findViewById(R.id.spnrRotation);
             mSelectedRotation = (Integer) rotationSpinner.getSelectedItem();
@@ -161,8 +165,6 @@ public class FaceDetectFromPhotoFragment extends AbstractFaceDetectFragment impl
                         options.inMutable = true;
                         Bitmap fullImage = mReservedDetectedBitmap = BitmapFactory.decodeFile(imagePath, options);
                         Canvas fullImageCanvas = new Canvas(fullImage);
-                        int imageWidth = fullImageCanvas.getWidth();
-                        int imageHeight = fullImageCanvas.getHeight();
                         int rotation = Frame.ROTATION_0;
 
                         if (mSelectedRotation == null) {

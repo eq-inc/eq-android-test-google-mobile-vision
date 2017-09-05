@@ -2,8 +2,11 @@
 <resources>
     <dimen name="menu_padding_v">8dp</dimen>
     <dimen name="face_line_width">4dp</dimen>
+    <dimen name="face_id_width">18dp</dimen>
     <dimen name="detect_item_padding">2dp</dimen>
     <dimen name="image_round_corner_size">4dp</dimen>
     <dimen name="image_round_line_width">2dp</dimen>
     <dimen name="landmark_point_size">4dp</dimen>
+    <dimen name="camera_preview_width">500dp</dimen>
+    <dimen name="camera_preview_height">281dp</dimen>
 </resources>
