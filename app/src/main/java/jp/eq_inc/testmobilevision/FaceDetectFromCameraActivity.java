@@ -69,6 +69,7 @@ public class FaceDetectFromCameraActivity extends AbstractFaceDetectActivity imp
                 public void onNothingSelected(AdapterView<?> parent) {
                 }
             });
+            ((SwitchCompat) findViewById(R.id.scUseMultiProcessor)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
             ((SwitchCompat) findViewById(R.id.scClassification)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
             ((SwitchCompat) findViewById(R.id.scLandmark)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
             ((SwitchCompat) findViewById(R.id.scDetectMode)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);

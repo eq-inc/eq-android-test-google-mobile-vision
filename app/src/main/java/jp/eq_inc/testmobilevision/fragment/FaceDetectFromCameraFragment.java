@@ -9,9 +9,9 @@ import android.graphics.Paint;
 import android.graphics.PointF;
 import android.graphics.PorterDuff;
 import android.os.Bundle;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.SwitchCompat;
 import android.util.DisplayMetrics;
-import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.SurfaceView;
 import android.view.View;
@@ -28,9 +28,13 @@ import com.google.android.gms.vision.MultiProcessor;
 import com.google.android.gms.vision.Tracker;
 import com.google.android.gms.vision.face.Face;
 import com.google.android.gms.vision.face.FaceDetector;
+import com.google.android.gms.vision.face.LargestFaceFocusingProcessor;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -53,6 +57,7 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
     private int mReservedRequestedOrientation = 0;
     private Size mRealPreviewSize = null;
     private PointF mShownPreviewSize = new PointF();
+    private boolean mTakingPicture = false;
 
     public FaceDetectFromCameraFragment() {
         // Required empty public constructor
@@ -79,6 +84,7 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
         mCameraPreview = (SurfaceView) view.findViewById(R.id.svCameraPreview);
         mPreviewOverlay = (GraphicOverlay) view.findViewById(R.id.goPreviewOverlay);
         mPreviewOverlay.setOnDrawListener(mPreviewOverlayListener);
+        mPreviewOverlay.setOnClickListener(mPreviewOverlayClickListener);
         mDetectedInformationTv = (TextView) view.findViewById(R.id.tvFaceInformation);
 
         ViewGroup cameraPreviewContainer = (ViewGroup) view.findViewById(R.id.flCameraPreviewContainer);
@@ -156,8 +162,16 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
             builder.setTrackingEnabled(tempSwitch.isChecked());
 
             mFaceDetector = builder.build();
-            MultiProcessor.Builder<Face> multiProcessorBuilder = new MultiProcessor.Builder<Face>(mMultiProcessFactory);
-            mFaceDetector.setProcessor(multiProcessorBuilder.build());
+
+            // use multi processor
+            tempSwitch = (SwitchCompat) activity.findViewById(R.id.scUseMultiProcessor);
+            if (tempSwitch.isChecked()) {
+                MultiProcessor.Builder<Face> multiProcessorBuilder = new MultiProcessor.Builder<Face>(mMultiProcessFactory);
+                mFaceDetector.setProcessor(multiProcessorBuilder.build());
+            } else {
+                LargestFaceFocusingProcessor.Builder focusingProcessorBuilder = new LargestFaceFocusingProcessor.Builder(mFaceDetector, new FaceTracker());
+                mFaceDetector.setProcessor(focusingProcessorBuilder.build());
+            }
 
             ret = true;
         } catch (Exception e) {
@@ -334,6 +348,63 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
         }
     };
 
+    private View.OnClickListener mPreviewOverlayClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            if (mCameraSource != null && !mTakingPicture) {
+                mTakingPicture = true;
+                mCameraSource.takePicture(null, new CameraSource.PictureCallback() {
+                    @Override
+                    public void onPictureTaken(byte[] bytes) {
+                        mTakingPicture = false;
+
+                        Activity activity = getActivity();
+                        File cacheDir = activity.getExternalCacheDir();
+                        if (!cacheDir.exists()) {
+                            cacheDir.mkdirs();
+                        }
+
+                        if (cacheDir.exists()) {
+                            Calendar currentCalendar = Calendar.getInstance();
+                            String fileName = String.format(
+                                    "%04d.%02d.%02d-%02d.%02d.%02d.%03d.jpg",
+                                    currentCalendar.get(Calendar.YEAR),
+                                    currentCalendar.get(Calendar.MONTH) + 1,
+                                    currentCalendar.get(Calendar.DAY_OF_MONTH),
+                                    currentCalendar.get(Calendar.HOUR_OF_DAY),
+                                    currentCalendar.get(Calendar.MINUTE),
+                                    currentCalendar.get(Calendar.SECOND),
+                                    currentCalendar.get(Calendar.MILLISECOND)
+                            );
+                            File jpegFile = new File(cacheDir.getAbsolutePath() + File.separator + fileName);
+                            FileOutputStream jpegFileStream = null;
+
+                            try {
+                                jpegFileStream = new FileOutputStream(jpegFile);
+                                jpegFileStream.write(bytes);
+
+                                new AlertDialog.Builder(activity)
+                                        .setMessage(getString(R.string.taken_picture, jpegFile.getAbsoluteFile()))
+                                        .setPositiveButton(android.R.string.ok, null)
+                                        .show();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            } finally {
+                                if (jpegFileStream != null) {
+                                    try {
+                                        jpegFileStream.close();
+                                    } catch (IOException e) {
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+                });
+            }
+        }
+    };
+
     private GraphicOverlay.OnDrawListener mPreviewOverlayListener = new GraphicOverlay.OnDrawListener() {
         @Override
         public void onDraw(Canvas canvas) {
@@ -383,6 +454,8 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
 
         @Override
         public void onNewItem(int i, Face face) {
+            LogUtil.d("", "onNewItem: " + face.getId());
+
             super.onNewItem(i, face);
             mVisible = true;
             mDrawFaceMap.put(this, face);
@@ -411,6 +484,10 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
 
         @Override
         public void onMissing(Detector.Detections<Face> detections) {
+            if (mDrawFaceMap.containsKey(this)) {
+                LogUtil.d("", "onMissing: " + mDrawFaceMap.get(this).getId());
+            }
+
             super.onMissing(detections);
             mVisible = false;
             mPreviewOverlay.postInvalidate();
@@ -418,6 +495,10 @@ public class FaceDetectFromCameraFragment extends AbstractFaceDetectFragment {
 
         @Override
         public void onDone() {
+            if (mDrawFaceMap.containsKey(this)) {
+                LogUtil.d("", "onDone: " + mDrawFaceMap.get(this).getId());
+            }
+
             super.onDone();
             mDrawFaceMap.remove(this);
         }

@@ -18,6 +18,13 @@
             android:layout_height="match_parent"
             android:orientation="vertical">
             <android.support.v7.widget.SwitchCompat
+                android:id="@+id/scUseMultiProcessor"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/processor_mode"
+                android:textOn="@string/all_classification"
+                android:textOff="@string/no_classification"/>
+            <android.support.v7.widget.SwitchCompat
                 android:id="@+id/scClassification"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

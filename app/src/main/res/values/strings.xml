@@ -1,6 +1,9 @@
 <resources>
     <string name="app_name">TestMobileVision</string>
     <string name="please_wait">Please wait...</string>
+    <string name="processor_mode">use multi processor</string>
+    <string name="processor_mode_multi">Multi</string>
+    <string name="processor_mode_focus">Focus</string>
     <string name="classification">Classification</string>
     <string name="all_classification">All</string>
     <string name="no_classification">No</string>
@@ -26,4 +29,5 @@
     <string name="use_front_camera">Use front camera</string>
     <string name="detect_fps">detect per second</string>
     <string name="default_detect_fps">30</string>
+    <string name="taken_picture">taken picture and save it at\n\"%s\".</string>
 </resources>
