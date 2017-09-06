@@ -12,7 +12,6 @@ import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.CompoundButton;
 import android.widget.Spinner;
-import android.widget.SpinnerAdapter;
 import android.widget.TextView;
 
 import com.google.android.gms.vision.Frame;
@@ -20,13 +19,13 @@ import com.google.android.gms.vision.Frame;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import jp.eq_inc.testmobilevision.fragment.AbstractFaceDetectFragment;
+import jp.eq_inc.testmobilevision.fragment.AbstractDetectFragment;
 import jp.eq_inc.testmobilevision.fragment.OnFragmentInteractionListener;
 
-public class FaceDetectActivity extends AbstractFaceDetectActivity implements OnFragmentInteractionListener {
+public class FaceDetectActivity extends AbstractDetectActivity implements OnFragmentInteractionListener {
     public static final String INTENT_STRING_PARAM_FRAGMENT_NAME = "INTENT_STRING_PARAM_FRAGMENT_NAME";
     public static final String INTENT_BUNDLE_PARAM_FRAGMENT_PARAM = "INTENT_BUNDLE_PARAM_FRAGMENT_PARAM";
-    private AbstractFaceDetectFragment mFragment;
+    private AbstractDetectFragment mFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,7 +38,7 @@ public class FaceDetectActivity extends AbstractFaceDetectActivity implements On
             try {
                 Class fragmentClass = Class.forName(fragmentName);
                 Method newInstanceMethod = fragmentClass.getMethod("newInstance", Bundle.class);
-                mFragment = (AbstractFaceDetectFragment) newInstanceMethod.invoke(null, fragmentParam);
+                mFragment = (AbstractDetectFragment) newInstanceMethod.invoke(null, fragmentParam);
                 needFinish = false;
             } catch (ClassNotFoundException e) {
             } catch (NoSuchMethodException e) {
@@ -58,7 +57,7 @@ public class FaceDetectActivity extends AbstractFaceDetectActivity implements On
             frameRotationSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                    mFragment.changeFaceDetectParams();
+                    mFragment.changeCommonParams();
                 }
 
                 @Override
@@ -93,7 +92,7 @@ public class FaceDetectActivity extends AbstractFaceDetectActivity implements On
     private CompoundButton.OnCheckedChangeListener mSwitchCheckedChangeListener = new CompoundButton.OnCheckedChangeListener() {
         @Override
         public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-            mFragment.changeFaceDetectParams();
+            mFragment.changeCommonParams();
         }
     };
 

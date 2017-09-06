@@ -22,6 +22,9 @@
         </activity>
         <activity android:name=".FaceDetectActivity" android:windowSoftInputMode="stateAlwaysHidden" />
         <activity android:name=".FaceDetectFromCameraActivity" android:windowSoftInputMode="stateAlwaysHidden" android:screenOrientation="landscape" />
+
+        <activity android:name=".TextRecognizeActivity" android:windowSoftInputMode="stateAlwaysHidden" />
+        <activity android:name=".TextRecognizeFromCameraActivity" android:windowSoftInputMode="stateAlwaysHidden" android:screenOrientation="landscape" />
     </application>
 
 </manifest>

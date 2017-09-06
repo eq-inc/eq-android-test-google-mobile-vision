@@ -34,7 +34,7 @@ import java.util.List;
 import jp.eq_inc.testmobilevision.R;
 import jp.eq_inc.testmobilevision.adapter.ImageAdapter;
 
-public class FaceDetectFromPhotoFragment extends AbstractFaceDetectFragment implements View.OnClickListener {
+public class FaceDetectFromPhotoFragment extends AbstractDetectFragment implements View.OnClickListener {
     private Bitmap mDetectedBitmap;
     private ImageView mDetectedIv;
     private TextView mDetectedInformationTv;
@@ -85,7 +85,7 @@ public class FaceDetectFromPhotoFragment extends AbstractFaceDetectFragment impl
     }
 
     @Override
-    public void changeFaceDetectParams() {
+    public void changeCommonParams() {
         if (mCurrentSelectedId != null) {
             FaceDetectTask task = new FaceDetectTask();
             task.execute(mCurrentSelectedId);
@@ -205,9 +205,10 @@ public class FaceDetectFromPhotoFragment extends AbstractFaceDetectFragment impl
 
                             for (int i = 0, size = detectedFaceArray.size(); i < size; i++) {
                                 Face detectedFace = detectedFaceArray.valueAt(i);
+                                PointF facePosition = detectedFace.getPosition();
 
                                 // 顔を囲う線を描画
-                                drawFaceLine(fullImageCanvas, detectedFace, linePaint, rotation);
+                                drawQuadLine(fullImageCanvas, "ID: " + String.valueOf(detectedFace.getId()), facePosition.x, facePosition.y, detectedFace.getWidth(), detectedFace.getHeight(), linePaint, rotation);
 
                                 builder.append("Face ID: ").append(detectedFace.getId()).append("\n");
 

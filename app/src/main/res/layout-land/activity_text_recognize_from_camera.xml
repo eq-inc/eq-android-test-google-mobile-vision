@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="horizontal"
+              android:weightSum="1.0"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent">
+
+    <ScrollView
+        android:layout_weight="0.25"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:paddingLeft="4dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
+        <LinearLayout
+            android:id="@+id/llDetectParamList"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+            <android.support.v7.widget.SwitchCompat
+                android:id="@+id/scUseMultiProcessor"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/processor_mode"
+                android:textOn="@string/all_classification"
+                android:textOff="@string/no_classification"/>
+            <android.support.v7.widget.SwitchCompat
+                android:id="@+id/scAutoFocus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/auto_focus"/>
+            <android.support.v7.widget.SwitchCompat
+                android:id="@+id/scFacing"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/use_front_camera"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:weightSum="1.0"
+                android:orientation="horizontal">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/detect_fps"/>
+                <EditText
+                    android:id="@+id/etDetectFps"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"
+                    android:text="@string/default_detect_fps"
+                    android:layout_weight="1.0"/>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <FrameLayout
+        android:id="@+id/flFragment"
+        android:paddingTop="4dp"
+        android:paddingRight="4dp"
+        android:paddingBottom="4dp"
+        android:layout_weight="0.75"
+        android:layout_width="0dp"
+        android:layout_height="match_parent" />
+</LinearLayout>

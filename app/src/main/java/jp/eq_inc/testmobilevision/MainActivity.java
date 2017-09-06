@@ -14,14 +14,18 @@ import java.io.Serializable;
 import jp.eq_inc.testmobilevision.fragment.FaceDetectFromCameraFragment;
 import jp.eq_inc.testmobilevision.fragment.FaceDetectFromMovieFragment;
 import jp.eq_inc.testmobilevision.fragment.FaceDetectFromPhotoFragment;
+import jp.eq_inc.testmobilevision.fragment.TextRecognizeFromCameraFragment;
+import jp.eq_inc.testmobilevision.fragment.TextRecognizeFromMovieFragment;
+import jp.eq_inc.testmobilevision.fragment.TextRecognizeFromPhotoFragment;
 
 public class MainActivity extends AppCompatActivity {
     private static final MenuItem[] sMenuItemArray = new MenuItem[]{
             new MenuItem("Face Detect from Photo", FaceDetectActivity.class, new String[]{FaceDetectActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{FaceDetectFromPhotoFragment.class.getName()}),
             new MenuItem("Face Detect from Movie", FaceDetectActivity.class, new String[]{FaceDetectActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{FaceDetectFromMovieFragment.class.getName()}),
             new MenuItem("Face Detect from Camera", FaceDetectFromCameraActivity.class, new String[]{FaceDetectFromCameraActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{FaceDetectFromCameraFragment.class.getName()}),
-            //new MenuItem("Face Detect from Movie", FaceDetectFromMovieActivity.class),
-            //new MenuItem("Face Detect from Camera", FaceDetectFromCameraActivity.class),
+            new MenuItem("Text Recognize from Photo", TextRecognizeActivity.class, new String[]{FaceDetectActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{TextRecognizeFromPhotoFragment.class.getName()}),
+            new MenuItem("Text Recognize from Movie", TextRecognizeActivity.class, new String[]{FaceDetectActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{TextRecognizeFromMovieFragment.class.getName()}),
+            new MenuItem("Text Recognize from Camera", TextRecognizeFromCameraActivity.class, new String[]{TextRecognizeFromCameraActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{TextRecognizeFromCameraFragment.class.getName()}),
     };
 
     @Override

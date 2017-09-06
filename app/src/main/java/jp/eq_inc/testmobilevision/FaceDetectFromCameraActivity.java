@@ -24,13 +24,13 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import jp.co.thcomp.util.ToastUtil;
-import jp.eq_inc.testmobilevision.fragment.AbstractFaceDetectFragment;
+import jp.eq_inc.testmobilevision.fragment.AbstractDetectFragment;
 import jp.eq_inc.testmobilevision.fragment.OnFragmentInteractionListener;
 
-public class FaceDetectFromCameraActivity extends AbstractFaceDetectActivity implements OnFragmentInteractionListener {
+public class FaceDetectFromCameraActivity extends AbstractDetectActivity implements OnFragmentInteractionListener {
     public static final String INTENT_STRING_PARAM_FRAGMENT_NAME = "INTENT_STRING_PARAM_FRAGMENT_NAME";
     public static final String INTENT_BUNDLE_PARAM_FRAGMENT_PARAM = "INTENT_BUNDLE_PARAM_FRAGMENT_PARAM";
-    private AbstractFaceDetectFragment mFragment;
+    private AbstractDetectFragment mFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,7 +43,7 @@ public class FaceDetectFromCameraActivity extends AbstractFaceDetectActivity imp
             try {
                 Class fragmentClass = Class.forName(fragmentName);
                 Method newInstanceMethod = fragmentClass.getMethod("newInstance", Bundle.class);
-                mFragment = (AbstractFaceDetectFragment) newInstanceMethod.invoke(null, fragmentParam);
+                mFragment = (AbstractDetectFragment) newInstanceMethod.invoke(null, fragmentParam);
                 needFinish = false;
             } catch (ClassNotFoundException e) {
             } catch (NoSuchMethodException e) {
@@ -62,7 +62,7 @@ public class FaceDetectFromCameraActivity extends AbstractFaceDetectActivity imp
             frameRotationSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                    mFragment.changeFaceDetectParams();
+                    mFragment.changeCommonParams();
                 }
 
                 @Override
@@ -103,7 +103,7 @@ public class FaceDetectFromCameraActivity extends AbstractFaceDetectActivity imp
     private CompoundButton.OnCheckedChangeListener mSwitchCheckedChangeListener = new CompoundButton.OnCheckedChangeListener() {
         @Override
         public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-            mFragment.changeFaceDetectParams();
+            mFragment.changeCommonParams();
         }
     };
 
@@ -122,7 +122,7 @@ public class FaceDetectFromCameraActivity extends AbstractFaceDetectActivity imp
         public void afterTextChanged(Editable s) {
             try {
                 Float.parseFloat(s.toString());
-                mFragment.changeFaceDetectParams();
+                mFragment.changeCommonParams();
             } catch (NumberFormatException e) {
                 ToastUtil.showToast(FaceDetectFromCameraActivity.this, e.getLocalizedMessage(), Toast.LENGTH_LONG);
             }
