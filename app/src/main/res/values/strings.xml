@@ -30,4 +30,21 @@
     <string name="detect_fps">detect per second</string>
     <string name="default_detect_fps">30</string>
     <string name="taken_picture">taken picture and save it at\n\"%s\".</string>
+    <string name="barcode_format">Barcode format</string>
+    <string-array name="barcode_format_array">
+        <item>ALL_FORMATS</item>
+        <item>AZTEC</item>
+        <item>CODABAR</item>
+        <item>CODE_39</item>
+        <item>CODE_93</item>
+        <item>CODE_128</item>
+        <item>DATA_MATRIX</item>
+        <item>EAN_8</item>
+        <item>EAN_13</item>
+        <item>ITF</item>
+        <item>PDF417</item>
+        <item>QR_CODE</item>
+        <item>UPC_A</item>
+        <item>UPC_E</item>
+    </string-array>
 </resources>

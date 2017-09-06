@@ -11,6 +11,9 @@ import android.widget.TextView;
 
 import java.io.Serializable;
 
+import jp.eq_inc.testmobilevision.fragment.BarcodeDetectFromCameraFragment;
+import jp.eq_inc.testmobilevision.fragment.BarcodeDetectFromMovieFragment;
+import jp.eq_inc.testmobilevision.fragment.BarcodeDetectFromPhotoFragment;
 import jp.eq_inc.testmobilevision.fragment.FaceDetectFromCameraFragment;
 import jp.eq_inc.testmobilevision.fragment.FaceDetectFromMovieFragment;
 import jp.eq_inc.testmobilevision.fragment.FaceDetectFromPhotoFragment;
@@ -23,6 +26,9 @@ public class MainActivity extends AppCompatActivity {
             new MenuItem("Face Detect from Photo", FaceDetectActivity.class, new String[]{FaceDetectActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{FaceDetectFromPhotoFragment.class.getName()}),
             new MenuItem("Face Detect from Movie", FaceDetectActivity.class, new String[]{FaceDetectActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{FaceDetectFromMovieFragment.class.getName()}),
             new MenuItem("Face Detect from Camera", FaceDetectFromCameraActivity.class, new String[]{FaceDetectFromCameraActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{FaceDetectFromCameraFragment.class.getName()}),
+            new MenuItem("Barcode Detect from Photo", BarcodeDetectActivity.class, new String[]{BarcodeDetectActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{BarcodeDetectFromPhotoFragment.class.getName()}),
+            new MenuItem("Barcode Detect from Movie", BarcodeDetectActivity.class, new String[]{BarcodeDetectActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{BarcodeDetectFromMovieFragment.class.getName()}),
+            new MenuItem("Barcode Detect from Camera", BarcodeDetectFromCameraActivity.class, new String[]{BarcodeDetectFromCameraActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{BarcodeDetectFromCameraFragment.class.getName()}),
             new MenuItem("Text Recognize from Photo", TextRecognizeActivity.class, new String[]{FaceDetectActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{TextRecognizeFromPhotoFragment.class.getName()}),
             new MenuItem("Text Recognize from Movie", TextRecognizeActivity.class, new String[]{FaceDetectActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{TextRecognizeFromMovieFragment.class.getName()}),
             new MenuItem("Text Recognize from Camera", TextRecognizeFromCameraActivity.class, new String[]{TextRecognizeFromCameraActivity.INTENT_STRING_PARAM_FRAGMENT_NAME}, new String[]{TextRecognizeFromCameraFragment.class.getName()}),
