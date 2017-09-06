@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           package="jp.eq_inc.testmobilevision">
 
+    <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
@@ -19,12 +20,8 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <activity android:name=".FaceDetectActivity">
-        </activity>
-        <activity android:name=".FaceDetectFromMovieActivity">
-        </activity>
-        <activity android:name=".FaceDetectFromCameraActivity">
-        </activity>
+        <activity android:name=".FaceDetectActivity" android:windowSoftInputMode="stateAlwaysHidden" />
+        <activity android:name=".FaceDetectFromCameraActivity" android:windowSoftInputMode="stateAlwaysHidden" android:screenOrientation="landscape" />
     </application>
 
 </manifest>

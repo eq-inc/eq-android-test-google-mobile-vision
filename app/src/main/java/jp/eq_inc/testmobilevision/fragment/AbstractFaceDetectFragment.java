@@ -3,6 +3,7 @@ package jp.eq_inc.testmobilevision.fragment;
 import android.Manifest;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
@@ -80,17 +81,21 @@ abstract public class AbstractFaceDetectFragment extends Fragment {
     }
 
     protected void drawFaceLine(Canvas imageCanvas, Face detectedFace, Paint linePaint, int frameRotation){
+        PointF facePosition = detectedFace.getPosition();
+        drawFaceLine(imageCanvas, detectedFace.getId(), facePosition.x, facePosition.y, detectedFace.getWidth(), detectedFace.getHeight(), linePaint, frameRotation);
+    }
+
+    protected void drawFaceLine(Canvas imageCanvas, int id, float posX, float posY, float width, float height, Paint linePaint, int frameRotation){
         int imageWidth = imageCanvas.getWidth();
         int imageHeight = imageCanvas.getHeight();
         float lineWidth = linePaint.getStrokeWidth();
-        PointF faceLeftTopPointF = detectedFace.getPosition();
-        if (faceLeftTopPointF.x < 0) {
-            faceLeftTopPointF.x = 0;
+        if (posX < 0) {
+            posX = 0;
         }
-        if (faceLeftTopPointF.y < 0) {
-            faceLeftTopPointF.y = 0;
+        if (posY < 0) {
+            posY = 0;
         }
-        PointF faceRightBottomPointF = new PointF(faceLeftTopPointF.x + detectedFace.getWidth(), faceLeftTopPointF.y + detectedFace.getHeight());
+        PointF faceRightBottomPointF = new PointF(posX + width, posY + height);
         if(frameRotation == Frame.ROTATION_0 || frameRotation == Frame.ROTATION_180){
             if (faceRightBottomPointF.x > imageWidth) {
                 faceRightBottomPointF.x = imageWidth;
@@ -109,10 +114,16 @@ abstract public class AbstractFaceDetectFragment extends Fragment {
 
         Path clipPath = new Path();
         imageCanvas.save();
-        clipPath.addRect(faceLeftTopPointF.x + lineWidth, faceLeftTopPointF.y + lineWidth, faceRightBottomPointF.x - lineWidth, faceRightBottomPointF.y - lineWidth, Path.Direction.CW);
+        clipPath.addRect(posX + lineWidth, posY + lineWidth, faceRightBottomPointF.x - lineWidth, faceRightBottomPointF.y - lineWidth, Path.Direction.CW);
         imageCanvas.clipPath(clipPath, Region.Op.DIFFERENCE);
-        imageCanvas.drawRect(faceLeftTopPointF.x, faceLeftTopPointF.y, faceRightBottomPointF.x, faceRightBottomPointF.y, linePaint);
+        imageCanvas.drawRect(posX, posY, faceRightBottomPointF.x, faceRightBottomPointF.y, linePaint);
         imageCanvas.restore();
+
+        // IDを表示
+        Paint idPaint = new Paint();
+        idPaint.setColor(Color.BLACK);
+        idPaint.setTextSize(getResources().getDimensionPixelSize(R.dimen.face_id_width));
+        imageCanvas.drawText("ID: " + String.valueOf(id), posX, posY, idPaint);
     }
 
     protected String getLandmarkTypeString(int type){
