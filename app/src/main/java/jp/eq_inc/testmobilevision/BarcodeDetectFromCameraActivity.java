@@ -1,30 +1,24 @@
 package jp.eq_inc.testmobilevision;
 
-import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.widget.SwitchCompat;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.BaseAdapter;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Spinner;
-import android.widget.TextView;
 import android.widget.Toast;
-
-import com.google.android.gms.vision.Frame;
-import com.google.android.gms.vision.barcode.Barcode;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import jp.co.thcomp.util.ToastUtil;
+import jp.eq_inc.testmobilevision.adapter.BarcodeFormatAdapter;
+import jp.eq_inc.testmobilevision.adapter.FrameRotationAdapter;
 import jp.eq_inc.testmobilevision.fragment.AbstractDetectFragment;
 import jp.eq_inc.testmobilevision.fragment.OnFragmentInteractionListener;
 
@@ -57,25 +51,17 @@ public class BarcodeDetectFromCameraActivity extends AbstractDetectActivity impl
             finish();
         } else {
             super.onCreate(savedInstanceState);
-            setContentView(R.layout.activity_face_detect_from_camera);
+            setContentView(R.layout.activity_barcode_detect_from_camera);
 
-            // rotation
-            Spinner frameRotationSpinner = (Spinner) findViewById(R.id.spnrRotation);
-            frameRotationSpinner.setAdapter(new FrameRotationSpinner(this));
-            frameRotationSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-                @Override
-                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                    mFragment.changeCommonParams();
-                }
+            ((SwitchCompat) findViewById(R.id.scUseMultiProcessor)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
+            ((SwitchCompat) findViewById(R.id.scAutoFocus)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
+            ((SwitchCompat) findViewById(R.id.scFacing)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
 
-                @Override
-                public void onNothingSelected(AdapterView<?> parent) {
-                }
-            });
+            ((EditText) findViewById(R.id.etDetectFps)).addTextChangedListener(mDetectFpsChangedListener);
 
             // barcode format
             Spinner barcodeFormatSpinner = (Spinner) findViewById(R.id.spnrBarcodeFormat);
-            barcodeFormatSpinner.setAdapter(new BarcodeFormatSpinner(this));
+            barcodeFormatSpinner.setAdapter(new BarcodeFormatAdapter(this));
             barcodeFormatSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -106,102 +92,32 @@ public class BarcodeDetectFromCameraActivity extends AbstractDetectActivity impl
 
     }
 
-    private static class FrameRotationSpinner extends BaseAdapter {
-        private Integer[] mItemArray = {
-                null,
-                Frame.ROTATION_0,
-                Frame.ROTATION_90,
-                Frame.ROTATION_180,
-                Frame.ROTATION_270,
-        };
-        private String[] mMenuTitleArray;
-        private Context mContext;
+    private CompoundButton.OnCheckedChangeListener mSwitchCheckedChangeListener = new CompoundButton.OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+            mFragment.changeCommonParams();
+        }
+    };
 
-        public FrameRotationSpinner(Context context) {
-            mContext = context;
-            mMenuTitleArray = context.getResources().getStringArray(R.array.frame_rotation_array);
+    private TextWatcher mDetectFpsChangedListener = new TextWatcher() {
+        @Override
+        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            // 処理なし
         }
 
         @Override
-        public int getCount() {
-            return mItemArray.length;
+        public void onTextChanged(CharSequence s, int start, int before, int count) {
+            // 処理なし
         }
 
         @Override
-        public Object getItem(int position) {
-            return mItemArray[position];
-        }
-
-        @Override
-        public long getItemId(int position) {
-            return position;
-        }
-
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            if (convertView == null) {
-                LayoutInflater inflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-                convertView = inflater.inflate(R.layout.item_frame_rotation_spinner, parent, false);
+        public void afterTextChanged(Editable s) {
+            try {
+                Float.parseFloat(s.toString());
+                mFragment.changeCommonParams();
+            } catch (NumberFormatException e) {
+                ToastUtil.showToast(BarcodeDetectFromCameraActivity.this, e.getLocalizedMessage(), Toast.LENGTH_LONG);
             }
-
-            TextView itemText = (TextView) convertView.findViewById(R.id.tvFrameRotation);
-            itemText.setText(mMenuTitleArray[position]);
-
-            return convertView;
         }
-    }
-
-    private static class BarcodeFormatSpinner extends BaseAdapter {
-        private Integer[] mItemArray = {
-                Barcode.ALL_FORMATS,
-                Barcode.AZTEC,
-                Barcode.CODABAR,
-                Barcode.CODE_39,
-                Barcode.CODE_93,
-                Barcode.CODE_128,
-                Barcode.DATA_MATRIX,
-                Barcode.EAN_8,
-                Barcode.EAN_13,
-                Barcode.ITF,
-                Barcode.PDF417,
-                Barcode.QR_CODE,
-                Barcode.UPC_A,
-                Barcode.UPC_E,
-        };
-        private String[] mMenuTitleArray;
-        private Context mContext;
-
-        public BarcodeFormatSpinner(Context context) {
-            mContext = context;
-            mMenuTitleArray = context.getResources().getStringArray(R.array.barcode_format_array);
-        }
-
-        @Override
-        public int getCount() {
-            return mItemArray.length;
-        }
-
-        @Override
-        public Object getItem(int position) {
-            return mItemArray[position];
-        }
-
-        @Override
-        public long getItemId(int position) {
-            return position;
-        }
-
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            if (convertView == null) {
-                LayoutInflater inflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-                convertView = inflater.inflate(R.layout.item_frame_rotation_spinner, parent, false);
-            }
-
-            TextView itemText = (TextView) convertView.findViewById(R.id.tvFrameRotation);
-            itemText.setText(mMenuTitleArray[position]);
-
-            return convertView;
-        }
-    }
+    };
 }

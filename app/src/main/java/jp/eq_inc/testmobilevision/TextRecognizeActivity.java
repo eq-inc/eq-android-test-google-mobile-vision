@@ -3,10 +3,14 @@ package jp.eq_inc.testmobilevision;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.Spinner;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import jp.eq_inc.testmobilevision.adapter.FrameRotationAdapter;
 import jp.eq_inc.testmobilevision.fragment.AbstractDetectFragment;
 import jp.eq_inc.testmobilevision.fragment.OnFragmentInteractionListener;
 
@@ -40,6 +44,18 @@ public class TextRecognizeActivity extends AbstractDetectActivity implements OnF
         } else {
             super.onCreate(savedInstanceState);
             setContentView(R.layout.activity_text_recognize);
+            Spinner frameRotationSpinner = (Spinner) findViewById(R.id.spnrRotation);
+            frameRotationSpinner.setAdapter(new FrameRotationAdapter(this));
+            frameRotationSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    mFragment.changeCommonParams();
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {
+                }
+            });
         }
     }
 

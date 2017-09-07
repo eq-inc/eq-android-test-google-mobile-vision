@@ -1,29 +1,23 @@
 package jp.eq_inc.testmobilevision;
 
-import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.widget.SwitchCompat;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.BaseAdapter;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Spinner;
-import android.widget.TextView;
 import android.widget.Toast;
-
-import com.google.android.gms.vision.Frame;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import jp.co.thcomp.util.ToastUtil;
+import jp.eq_inc.testmobilevision.adapter.FrameRotationAdapter;
 import jp.eq_inc.testmobilevision.fragment.AbstractDetectFragment;
 import jp.eq_inc.testmobilevision.fragment.OnFragmentInteractionListener;
 
@@ -62,7 +56,6 @@ public class TextRecognizeFromCameraActivity extends AbstractDetectActivity impl
             ((SwitchCompat) findViewById(R.id.scFacing)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
 
             ((EditText) findViewById(R.id.etDetectFps)).addTextChangedListener(mDetectFpsChangedListener);
-
         }
     }
 

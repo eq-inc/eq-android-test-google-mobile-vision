@@ -92,9 +92,6 @@ public class BarcodeDetectFromCameraFragment extends AbstractDetectFragment {
         ViewGroup cameraPreviewContainer = (ViewGroup) view.findViewById(R.id.flCameraPreviewContainer);
         cameraPreviewContainer.getViewTreeObserver().addOnGlobalLayoutListener(mParentViewGroupLayoutListener);
 
-        // 使用しないので、非表示
-        getActivity().findViewById(R.id.spnrRotation).setVisibility(View.GONE);
-
         return view;
     }
 

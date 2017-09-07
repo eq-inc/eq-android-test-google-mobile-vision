@@ -59,24 +59,6 @@
                 android:text="@string/face_tracking"
                 android:textOn="@string/face_tracking_on"
                 android:textOff="@string/face_tracking_off"/>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:weightSum="1.0">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/frame_rotation"/>
-                <View
-                    android:layout_width="8dp"
-                    android:layout_height="1dp" />
-                <Spinner
-                    android:id="@+id/spnrRotation"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1.0"/>
-            </LinearLayout>
             <android.support.v7.widget.SwitchCompat
                 android:id="@+id/scAutoFocus"
                 android:layout_width="match_parent"
