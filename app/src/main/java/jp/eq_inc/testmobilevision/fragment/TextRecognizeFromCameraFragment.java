@@ -408,14 +408,9 @@ public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
 
                         List<? extends Text> childTextComponentList = textBlock.getComponents();
                         boolean haveChildTextComponent = ((childTextComponentList != null) && (childTextComponentList.size() > 0));
-                        String description = null;
                         Rect textBlockBound = textBlock.getBoundingBox();
 
-                        if (!haveChildTextComponent) {
-                            description = textBlock.getValue();
-                        }
-
-                        TextRecognizeFromCameraFragment.this.drawQuadLine(canvas, description, textBlockBound.left * xRate, textBlockBound.top * yRate, textBlockBound.width() * xRate, textBlockBound.height() * yRate, tracker.mLinePaint, Frame.ROTATION_0);
+                        TextRecognizeFromCameraFragment.this.drawQuadLine(canvas, null, textBlockBound.left * xRate, textBlockBound.top * yRate, textBlockBound.width() * xRate, textBlockBound.height() * yRate, tracker.mLinePaint, Frame.ROTATION_0);
 
                         if(haveChildTextComponent){
                             expandTextComponent(canvas, Frame.ROTATION_0, xRate, yRate, 1, childTextComponentList);
@@ -451,14 +446,10 @@ public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
                 boolean haveChildTextComponent = ((childTextComponentList != null) && (childTextComponentList.size() > 0));
 
                 Rect bounds = textComponent.getBoundingBox();
-                String description = null;
-
-                if (!haveChildTextComponent) {
-                    description = textComponent.getValue();
-                }
 
                 // テキストを囲う線を描画
-                drawQuadLine(fullImageCanvas, description, bounds.left * xRate, bounds.top * yRate, bounds.width() * xRate, bounds.height() * yRate, linePaint, rotation);
+                // 親要素を囲う線と重複させないために、描画開始位置を線幅分、中にずらす。そして幅・高さはずらした分を両端から引く必要がある
+                drawQuadLine(fullImageCanvas, null, bounds.left * xRate + linePaint.getStrokeWidth() * indent, bounds.top * yRate + linePaint.getStrokeWidth() * indent, bounds.width() * xRate - linePaint.getStrokeWidth() * indent * 2, bounds.height() * yRate - linePaint.getStrokeWidth() * indent * 2, linePaint, rotation);
 
                 if (haveChildTextComponent) {
                     expandTextComponent(fullImageCanvas, rotation, xRate, yRate, indent + 1, childTextComponentList);
