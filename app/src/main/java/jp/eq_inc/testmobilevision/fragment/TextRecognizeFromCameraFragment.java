@@ -148,7 +148,7 @@ public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
                             int tempBoundsSize = bounds.width() * bounds.height();
                             if (largestSize < tempBoundsSize) {
                                 largestSize = tempBoundsSize;
-                                selectedItem = i;
+                                selectedItem = detectedItems.keyAt(i);
                             }
                         }
 

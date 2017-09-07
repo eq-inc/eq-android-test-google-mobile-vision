@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.SwitchCompat;
 import android.util.DisplayMetrics;
+import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.SurfaceView;
 import android.view.View;
@@ -143,10 +144,23 @@ public class BarcodeDetectFromCameraFragment extends AbstractDetectFragment {
                 MultiProcessor.Builder<Barcode> multiProcessorBuilder = new MultiProcessor.Builder<Barcode>(mMultiProcessFactory);
                 mBarcodeDetector.setProcessor(multiProcessorBuilder.build());
             } else {
-                FocusingProcessor focusingProcessor = new FocusingProcessor(mBarcodeDetector, new BarcodeTracker()) {
+                FocusingProcessor<Barcode> focusingProcessor = new FocusingProcessor<Barcode>(mBarcodeDetector, new BarcodeTracker()) {
                     @Override
                     public int selectFocus(Detector.Detections detections) {
-                        return 0;
+                        SparseArray<Barcode> detectedItems = detections.getDetectedItems();
+                        int selectedItem = 0;
+                        int largestSize = 0;
+                        for(int i=0, size=detectedItems.size(); i<size; i++){
+                            Barcode detectedItem = detectedItems.valueAt(i);
+                            Rect bounds = detectedItem.getBoundingBox();
+                            int tempBoundsSize = bounds.width() * bounds.height();
+                            if (largestSize < tempBoundsSize) {
+                                largestSize = tempBoundsSize;
+                                selectedItem = detectedItems.keyAt(i);
+                            }
+                        }
+
+                        return selectedItem;
                     }
                 };
                 mBarcodeDetector.setProcessor(focusingProcessor);
