@@ -146,19 +146,12 @@ public class TextRecognizeFromPhotoFragment extends AbstractDetectFragment imple
                             for (int i = 0, size = detectedFaceArray.size(); i < size; i++) {
                                 TextBlock detectedTextBlock = detectedFaceArray.valueAt(i);
                                 List<? extends Text> childTextComponentList = detectedTextBlock.getComponents();
-                                boolean haveChildTextComponent = ((childTextComponentList != null) && (childTextComponentList.size() > 0));
-                                String description = null;
                                 Rect textBlockBounds = detectedTextBlock.getBoundingBox();
 
-                                if (!haveChildTextComponent) {
-                                    description = detectedTextBlock.getValue();
-                                }
-
                                 // テキストを囲う線を描画
-                                drawQuadLine(fullImageCanvas, description, textBlockBounds.left, textBlockBounds.top, textBlockBounds.width(), textBlockBounds.height(), linePaint, rotation);
+                                drawQuadLine(fullImageCanvas, null, textBlockBounds.left, textBlockBounds.top, textBlockBounds.width(), textBlockBounds.height(), linePaint, rotation);
 
                                 builder.append("Value: ").append(detectedTextBlock.getValue()).append("\n");
-                                builder.append(" Language: ").append(detectedTextBlock.getLanguage()).append("\n");
 
                                 // テキストをさらに展開
                                 expandTextComponent(fullImageCanvas, rotation, builder, 1, detectedTextBlock.getComponents());
@@ -194,14 +187,10 @@ public class TextRecognizeFromPhotoFragment extends AbstractDetectFragment imple
                     boolean haveChildTextComponent = ((childTextComponentList != null) && (childTextComponentList.size() > 0));
 
                     Rect bounds = textComponent.getBoundingBox();
-                    String description = null;
-
-                    if (!haveChildTextComponent) {
-                        description = textComponent.getValue();
-                    }
 
                     // テキストを囲う線を描画
-                    drawQuadLine(fullImageCanvas, description, bounds.left, bounds.top, bounds.width(), bounds.height(), linePaint, rotation);
+                    // 親要素を囲う線と重複させないために、描画開始位置を線幅分、中にずらす。そして幅・高さはずらした分を両端から引く必要がある
+                    drawQuadLine(fullImageCanvas, null, bounds.left + linePaint.getStrokeWidth() * indent, bounds.top + linePaint.getStrokeWidth() * indent, bounds.width() - linePaint.getStrokeWidth() * indent * 2, bounds.height() - linePaint.getStrokeWidth() * indent * 2, linePaint, rotation);
 
                     if (haveChildTextComponent) {
                         expandTextComponent(fullImageCanvas, rotation, builder, indent + 1, childTextComponentList);
