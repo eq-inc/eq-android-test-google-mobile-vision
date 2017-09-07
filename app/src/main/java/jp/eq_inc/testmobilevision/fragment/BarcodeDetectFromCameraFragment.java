@@ -117,7 +117,7 @@ public class BarcodeDetectFromCameraFragment extends AbstractDetectFragment {
         getActivity().setRequestedOrientation(mReservedRequestedOrientation);
     }
 
-    private boolean initFaceDetector() {
+    private boolean initBarcodeDetector() {
         boolean ret = false;
 
         try {
@@ -225,7 +225,7 @@ public class BarcodeDetectFromCameraFragment extends AbstractDetectFragment {
         boolean ret = false;
 
         if (mStatus == Status.Init) {
-            if (initFaceDetector()) {
+            if (initBarcodeDetector()) {
                 if (initCameraSource()) {
                     try {
                         mCameraSource.start(mCameraPreview.getHolder());
