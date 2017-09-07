@@ -8,10 +8,12 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PointF;
 import android.graphics.PorterDuff;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.SwitchCompat;
 import android.util.DisplayMetrics;
+import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.SurfaceView;
 import android.view.View;
@@ -23,12 +25,13 @@ import android.widget.TextView;
 import com.google.android.gms.common.images.Size;
 import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Detector;
+import com.google.android.gms.vision.FocusingProcessor;
 import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.MultiProcessor;
 import com.google.android.gms.vision.Tracker;
-import com.google.android.gms.vision.face.Face;
-import com.google.android.gms.vision.face.FaceDetector;
-import com.google.android.gms.vision.face.LargestFaceFocusingProcessor;
+import com.google.android.gms.vision.text.Text;
+import com.google.android.gms.vision.text.TextBlock;
+import com.google.android.gms.vision.text.TextRecognizer;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -36,35 +39,36 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import jp.co.thcomp.util.LogUtil;
 import jp.eq_inc.testmobilevision.R;
 import jp.eq_inc.testmobilevision.view.GraphicOverlay;
 
-public class FaceDetectFromCameraFragment extends AbstractDetectFragment {
+public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
     private enum Status {
-        Init, Detecting,
+        Init, Recognizing,
     }
 
     private SurfaceView mCameraPreview;
     private GraphicOverlay mPreviewOverlay;
     private TextView mDetectedInformationTv;
-    private FaceDetector mFaceDetector;
+    private TextRecognizer mTextRecognizer;
     private CameraSource mCameraSource;
     private Status mStatus = Status.Init;
-    private HashMap<FaceTracker, Face> mDrawFaceMap = new HashMap<FaceTracker, Face>();
+    private HashMap<TextTracker, TextBlock> mDrawTextBlockMap = new HashMap<TextTracker, TextBlock>();
     private int mReservedRequestedOrientation = 0;
     private Size mRealPreviewSize = null;
     private PointF mShownPreviewSize = new PointF();
     private boolean mTakingPicture = false;
 
-    public FaceDetectFromCameraFragment() {
+    public TextRecognizeFromCameraFragment() {
         // Required empty public constructor
     }
 
-    public static FaceDetectFromCameraFragment newInstance(Bundle param) {
-        FaceDetectFromCameraFragment fragment = new FaceDetectFromCameraFragment();
+    public static TextRecognizeFromCameraFragment newInstance(Bundle param) {
+        TextRecognizeFromCameraFragment fragment = new TextRecognizeFromCameraFragment();
         fragment.setArguments(param);
         return fragment;
     }
@@ -79,7 +83,7 @@ public class FaceDetectFromCameraFragment extends AbstractDetectFragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        View view = inflater.inflate(R.layout.fragment_face_detect_from_camera, container, false);
+        View view = inflater.inflate(R.layout.fragment_text_recognize_from_camera, container, false);
 
         mCameraPreview = (SurfaceView) view.findViewById(R.id.svCameraPreview);
         mPreviewOverlay = (GraphicOverlay) view.findViewById(R.id.goPreviewOverlay);
@@ -120,54 +124,38 @@ public class FaceDetectFromCameraFragment extends AbstractDetectFragment {
         try {
             Activity activity = getActivity();
 
-            if (mFaceDetector != null) {
-                mFaceDetector.release();
-                mFaceDetector = null;
+            if (mTextRecognizer != null) {
+                mTextRecognizer.release();
+                mTextRecognizer = null;
             }
-            FaceDetector.Builder builder = new FaceDetector.Builder(activity);
-
-            // classification
-            SwitchCompat tempSwitch = (SwitchCompat) activity.findViewById(R.id.scClassification);
-            if (tempSwitch.isChecked()) {
-                builder.setClassificationType(FaceDetector.ALL_CLASSIFICATIONS);
-            } else {
-                builder.setClassificationType(FaceDetector.NO_CLASSIFICATIONS);
-            }
-
-            // landmark
-            tempSwitch = (SwitchCompat) activity.findViewById(R.id.scLandmark);
-            if (tempSwitch.isChecked()) {
-                builder.setLandmarkType(FaceDetector.ALL_LANDMARKS);
-            } else {
-                builder.setLandmarkType(FaceDetector.NO_LANDMARKS);
-            }
-
-            // mode
-            tempSwitch = (SwitchCompat) activity.findViewById(R.id.scDetectMode);
-            if (tempSwitch.isChecked()) {
-                builder.setMode(FaceDetector.FAST_MODE);
-            } else {
-                builder.setMode(FaceDetector.ACCURATE_MODE);
-            }
-
-            // prominent face only
-            tempSwitch = (SwitchCompat) activity.findViewById(R.id.scProminentFaceOnly);
-            builder.setProminentFaceOnly(tempSwitch.isChecked());
-
-            // face tracking
-            tempSwitch = (SwitchCompat) activity.findViewById(R.id.scFaceTracking);
-            builder.setTrackingEnabled(tempSwitch.isChecked());
-
-            mFaceDetector = builder.build();
+            mTextRecognizer = new TextRecognizer.Builder(activity).build();
 
             // use multi processor
-            tempSwitch = (SwitchCompat) activity.findViewById(R.id.scUseMultiProcessor);
+            SwitchCompat tempSwitch = (SwitchCompat) activity.findViewById(R.id.scUseMultiProcessor);
             if (tempSwitch.isChecked()) {
-                MultiProcessor.Builder<Face> multiProcessorBuilder = new MultiProcessor.Builder<Face>(mMultiProcessFactory);
-                mFaceDetector.setProcessor(multiProcessorBuilder.build());
+                MultiProcessor.Builder<TextBlock> multiProcessorBuilder = new MultiProcessor.Builder<TextBlock>(mMultiProcessFactory);
+                mTextRecognizer.setProcessor(multiProcessorBuilder.build());
             } else {
-                LargestFaceFocusingProcessor.Builder focusingProcessorBuilder = new LargestFaceFocusingProcessor.Builder(mFaceDetector, new FaceTracker());
-                mFaceDetector.setProcessor(focusingProcessorBuilder.build());
+                FocusingProcessor<TextBlock> focusingProcessor = new FocusingProcessor<TextBlock>(mTextRecognizer, new TextTracker()) {
+                    @Override
+                    public int selectFocus(Detector.Detections<TextBlock> detections) {
+                        SparseArray<TextBlock> detectedItems = detections.getDetectedItems();
+                        int selectedItem = 0;
+                        int largestSize = 0;
+                        for (int i = 0, size = detectedItems.size(); i < size; i++) {
+                            TextBlock detectedItem = detectedItems.valueAt(i);
+                            Rect bounds = detectedItem.getBoundingBox();
+                            int tempBoundsSize = bounds.width() * bounds.height();
+                            if (largestSize < tempBoundsSize) {
+                                largestSize = tempBoundsSize;
+                                selectedItem = detectedItems.keyAt(i);
+                            }
+                        }
+
+                        return selectedItem;
+                    }
+                };
+                mTextRecognizer.setProcessor(focusingProcessor);
             }
 
             ret = true;
@@ -189,7 +177,7 @@ public class FaceDetectFromCameraFragment extends AbstractDetectFragment {
                 mCameraSource.release();
                 mCameraSource = null;
             }
-            CameraSource.Builder builder = new CameraSource.Builder(activity, mFaceDetector);
+            CameraSource.Builder builder = new CameraSource.Builder(activity, mTextRecognizer);
 
             // previewサイズ
             builder.setRequestedPreviewSize(mCameraPreview.getWidth(), mCameraPreview.getHeight());
@@ -248,10 +236,10 @@ public class FaceDetectFromCameraFragment extends AbstractDetectFragment {
     private boolean stop() {
         boolean ret = false;
 
-        if (mStatus == Status.Detecting) {
-            if (mFaceDetector != null) {
-                mFaceDetector.release();
-                mFaceDetector = null;
+        if (mStatus == Status.Recognizing) {
+            if (mTextRecognizer != null) {
+                mTextRecognizer.release();
+                mTextRecognizer = null;
             }
             if (mCameraSource != null) {
                 mCameraSource.stop();
@@ -338,10 +326,10 @@ public class FaceDetectFromCameraFragment extends AbstractDetectFragment {
         }
     };
 
-    private MultiProcessor.Factory<Face> mMultiProcessFactory = new MultiProcessor.Factory<Face>() {
+    private MultiProcessor.Factory<TextBlock> mMultiProcessFactory = new MultiProcessor.Factory<TextBlock>() {
         @Override
-        public Tracker<Face> create(Face face) {
-            return new FaceTracker();
+        public Tracker<TextBlock> create(TextBlock textBlock) {
+            return new TextTracker();
         }
     };
 
@@ -408,30 +396,34 @@ public class FaceDetectFromCameraFragment extends AbstractDetectFragment {
             canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
 
             StringBuilder builder = new StringBuilder();
-            for (Map.Entry<FaceTracker, Face> entry : mDrawFaceMap.entrySet()) {
-                FaceTracker tracker = entry.getKey();
+            for (Map.Entry<TextTracker, TextBlock> entry : mDrawTextBlockMap.entrySet()) {
+                TextTracker tracker = entry.getKey();
 
                 if (tracker.mVisible) {
-                    Face face = entry.getValue();
+                    TextBlock textBlock = entry.getValue();
 
                     if (mRealPreviewSize != null) {
                         float xRate = mShownPreviewSize.x / mRealPreviewSize.getWidth();
                         float yRate = mShownPreviewSize.y / mRealPreviewSize.getHeight();
 
-                        PointF facePosition = face.getPosition();
-                        FaceDetectFromCameraFragment.this.drawQuadLine(canvas, "ID: " + String.valueOf(face.getId()), facePosition.x * xRate, facePosition.y * yRate, face.getWidth() * xRate, face.getHeight() * yRate, tracker.mLinePaint, Frame.ROTATION_0);
+                        List<? extends Text> childTextComponentList = textBlock.getComponents();
+                        boolean haveChildTextComponent = ((childTextComponentList != null) && (childTextComponentList.size() > 0));
+                        String description = null;
+                        Rect textBlockBound = textBlock.getBoundingBox();
+
+                        if (!haveChildTextComponent) {
+                            description = textBlock.getValue();
+                        }
+
+                        TextRecognizeFromCameraFragment.this.drawQuadLine(canvas, description, textBlockBound.left * xRate, textBlockBound.top * yRate, textBlockBound.width() * xRate, textBlockBound.height() * yRate, tracker.mLinePaint, Frame.ROTATION_0);
+
+                        if(haveChildTextComponent){
+                            expandTextComponent(canvas, Frame.ROTATION_0, xRate, yRate, 1, childTextComponentList);
+                        }
                     }
 
-                    builder.append("ID: ").append(face.getId()).append("\n");
-                    if (face.getIsLeftEyeOpenProbability() > 0) {
-                        builder.append((face.getIsLeftEyeOpenProbability() * 100) + "% left eye is opened").append("\n");
-                    }
-                    if (face.getIsRightEyeOpenProbability() > 0) {
-                        builder.append((face.getIsRightEyeOpenProbability() * 100) + "% right eye is opened").append("\n");
-                    }
-                    if (face.getIsSmilingProbability() > 0) {
-                        builder.append((face.getIsSmilingProbability() * 100) + "% is smiled").append("\n");
-                    }
+                    builder.append("Value: ").append(textBlock.getValue()).append("\n");
+
                 }
             }
 
@@ -439,50 +431,76 @@ public class FaceDetectFromCameraFragment extends AbstractDetectFragment {
         }
     };
 
-    private class FaceTracker extends Tracker<Face> {
+    private void expandTextComponent(Canvas fullImageCanvas, int rotation, float xRate, float yRate, int indent, List<? extends Text> textComponentList) {
+        if (textComponentList != null && textComponentList.size() > 0) {
+            Activity activity = getActivity();
+            Paint linePaint = new Paint();
+            linePaint.setStrokeWidth(activity.getResources().getDimensionPixelSize(R.dimen.face_line_width) / 2);
+            int indentModThree = indent % 3;
+
+            if (indentModThree == 0) {
+                linePaint.setARGB(100, 255 - indent, 0, 0);
+            } else if (indentModThree == 1) {
+                linePaint.setARGB(100, 0, 255 - indent, 0);
+            } else {
+                linePaint.setARGB(100, 0, 0, 255 - indent);
+            }
+
+            for (Text textComponent : textComponentList) {
+                List<? extends Text> childTextComponentList = textComponent.getComponents();
+                boolean haveChildTextComponent = ((childTextComponentList != null) && (childTextComponentList.size() > 0));
+
+                Rect bounds = textComponent.getBoundingBox();
+                String description = null;
+
+                if (!haveChildTextComponent) {
+                    description = textComponent.getValue();
+                }
+
+                // テキストを囲う線を描画
+                drawQuadLine(fullImageCanvas, description, bounds.left * xRate, bounds.top * yRate, bounds.width() * xRate, bounds.height() * yRate, linePaint, rotation);
+
+                if (haveChildTextComponent) {
+                    expandTextComponent(fullImageCanvas, rotation, xRate, yRate, indent + 1, childTextComponentList);
+                }
+            }
+        }
+    }
+
+    private class TextTracker extends Tracker<TextBlock> {
         private Paint mLinePaint;
         private boolean mVisible = false;
 
-        public FaceTracker() {
+        public TextTracker() {
             super();
             mLinePaint = new Paint();
             mLinePaint.setStrokeWidth(getResources().getDimensionPixelSize(R.dimen.face_line_width));
+            mLinePaint.setARGB(100, 255, 0, 0);
         }
 
         @Override
-        public void onNewItem(int i, Face face) {
-            LogUtil.d("", "onNewItem: " + face.getId());
+        public void onNewItem(int i, TextBlock textBlock) {
+            LogUtil.d("", "onNewItem: " + textBlock.getValue());
 
-            super.onNewItem(i, face);
+            super.onNewItem(i, textBlock);
             mVisible = true;
-            mDrawFaceMap.put(this, face);
-            mPreviewOverlay.postInvalidate();
-
-            // 顔毎に線色を変える。ただし、同じIDの人は同じ色にする
-            int id = face.getId();
-            int idModThree = id % 3;
-            if (idModThree == 0) {
-                mLinePaint.setARGB(100, 256 - id, 0, 0);
-            } else if (idModThree == 1) {
-                mLinePaint.setARGB(100, 0, 256 - id, 0);
-            } else {
-                mLinePaint.setARGB(100, 0, 0, 256 - id);
-            }
-        }
-
-        @Override
-        public void onUpdate(Detector.Detections<Face> detections, Face face) {
-            super.onUpdate(detections, face);
-
-            mVisible = true;
-            mDrawFaceMap.put(this, face);
+            mDrawTextBlockMap.put(this, textBlock);
             mPreviewOverlay.postInvalidate();
         }
 
         @Override
-        public void onMissing(Detector.Detections<Face> detections) {
-            if (mDrawFaceMap.containsKey(this)) {
-                LogUtil.d("", "onMissing: " + mDrawFaceMap.get(this).getId());
+        public void onUpdate(Detector.Detections<TextBlock> detections, TextBlock textBlock) {
+            super.onUpdate(detections, textBlock);
+
+            mVisible = true;
+            mDrawTextBlockMap.put(this, textBlock);
+            mPreviewOverlay.postInvalidate();
+        }
+
+        @Override
+        public void onMissing(Detector.Detections<TextBlock> detections) {
+            if (mDrawTextBlockMap.containsKey(this)) {
+                LogUtil.d("", "onMissing: " + mDrawTextBlockMap.get(this).getValue());
             }
 
             super.onMissing(detections);
@@ -492,12 +510,12 @@ public class FaceDetectFromCameraFragment extends AbstractDetectFragment {
 
         @Override
         public void onDone() {
-            if (mDrawFaceMap.containsKey(this)) {
-                LogUtil.d("", "onDone: " + mDrawFaceMap.get(this).getId());
+            if (mDrawTextBlockMap.containsKey(this)) {
+                LogUtil.d("", "onDone: " + mDrawTextBlockMap.get(this).getValue());
             }
 
             super.onDone();
-            mDrawFaceMap.remove(this);
+            mDrawTextBlockMap.remove(this);
         }
     }
 }

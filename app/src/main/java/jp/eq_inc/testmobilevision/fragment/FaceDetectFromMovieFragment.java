@@ -9,7 +9,6 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.PointF;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.v7.widget.LinearLayoutManager;
@@ -38,7 +37,7 @@ import jp.eq_inc.testmobilevision.adapter.AbstractFaceDetectCursorAdapter;
 import jp.eq_inc.testmobilevision.adapter.MovieAdapter;
 import jp.eq_inc.testmobilevision.adapter.MovieFrameAdapter;
 
-public class FaceDetectFromMovieFragment extends AbstractFaceDetectFragment {
+public class FaceDetectFromMovieFragment extends AbstractDetectFragment {
     private Bitmap mDetectedBitmap;
     private ImageView mDetectedIv;
     private TextView mDetectedInformationTv;
@@ -53,7 +52,6 @@ public class FaceDetectFromMovieFragment extends AbstractFaceDetectFragment {
     public static FaceDetectFromMovieFragment newInstance(Bundle param) {
         FaceDetectFromMovieFragment fragment = new FaceDetectFromMovieFragment();
         fragment.setArguments(param);
-        CameraSource.Builder a;
         return fragment;
     }
 
@@ -114,7 +112,7 @@ public class FaceDetectFromMovieFragment extends AbstractFaceDetectFragment {
     }
 
     @Override
-    public void changeFaceDetectParams() {
+    public void changeCommonParams() {
         if(mCurrentSelectedId != null){
             if(mCurrentSelectedItemPosition != null && mCurrentSelectedItemPosition >= 0){
                 FaceDetectTask task = new FaceDetectTask();
@@ -280,9 +278,10 @@ public class FaceDetectFromMovieFragment extends AbstractFaceDetectFragment {
 
                     for (int i = 0, size = detectedFaceArray.size(); i < size; i++) {
                         Face detectedFace = detectedFaceArray.valueAt(i);
+                        PointF facePosition = detectedFace.getPosition();
 
                         // 顔を囲う線を描画
-                        drawFaceLine(fullImageCanvas, detectedFace, linePaint, rotation);
+                        drawQuadLine(fullImageCanvas, "ID: " + String.valueOf(detectedFace.getId()), facePosition.x, facePosition.y, detectedFace.getWidth(), detectedFace.getHeight(), linePaint, rotation);
 
                         builder.append("Face ID: ").append(detectedFace.getId()).append("\n");
 

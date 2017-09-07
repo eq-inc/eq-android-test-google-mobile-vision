@@ -3,20 +3,19 @@ package jp.eq_inc.testmobilevision;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v7.widget.SwitchCompat;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.CompoundButton;
 import android.widget.Spinner;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import jp.eq_inc.testmobilevision.adapter.BarcodeFormatAdapter;
 import jp.eq_inc.testmobilevision.adapter.FrameRotationAdapter;
 import jp.eq_inc.testmobilevision.fragment.AbstractDetectFragment;
 import jp.eq_inc.testmobilevision.fragment.OnFragmentInteractionListener;
 
-public class FaceDetectActivity extends AbstractDetectActivity implements OnFragmentInteractionListener {
+public class BarcodeDetectActivity extends AbstractDetectActivity implements OnFragmentInteractionListener {
     public static final String INTENT_STRING_PARAM_FRAGMENT_NAME = "INTENT_STRING_PARAM_FRAGMENT_NAME";
     public static final String INTENT_BUNDLE_PARAM_FRAGMENT_PARAM = "INTENT_BUNDLE_PARAM_FRAGMENT_PARAM";
     private AbstractDetectFragment mFragment;
@@ -45,7 +44,9 @@ public class FaceDetectActivity extends AbstractDetectActivity implements OnFrag
             finish();
         } else {
             super.onCreate(savedInstanceState);
-            setContentView(R.layout.activity_face_detect);
+            setContentView(R.layout.activity_barcode_detect);
+
+            // rotation
             Spinner frameRotationSpinner = (Spinner) findViewById(R.id.spnrRotation);
             frameRotationSpinner.setAdapter(new FrameRotationAdapter(this));
             frameRotationSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -58,11 +59,20 @@ public class FaceDetectActivity extends AbstractDetectActivity implements OnFrag
                 public void onNothingSelected(AdapterView<?> parent) {
                 }
             });
-            ((SwitchCompat) findViewById(R.id.scClassification)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
-            ((SwitchCompat) findViewById(R.id.scLandmark)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
-            ((SwitchCompat) findViewById(R.id.scDetectMode)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
-            ((SwitchCompat) findViewById(R.id.scProminentFaceOnly)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
-            ((SwitchCompat) findViewById(R.id.scFaceTracking)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
+
+            // barcode format
+            Spinner barcodeFormatSpinner = (Spinner) findViewById(R.id.spnrBarcodeFormat);
+            barcodeFormatSpinner.setAdapter(new BarcodeFormatAdapter(this));
+            barcodeFormatSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    mFragment.changeCommonParams();
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {
+                }
+            });
         }
     }
 
@@ -82,11 +92,4 @@ public class FaceDetectActivity extends AbstractDetectActivity implements OnFrag
     public void onFragmentInteraction(Uri uri) {
 
     }
-
-    private CompoundButton.OnCheckedChangeListener mSwitchCheckedChangeListener = new CompoundButton.OnCheckedChangeListener() {
-        @Override
-        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-            mFragment.changeCommonParams();
-        }
-    };
 }

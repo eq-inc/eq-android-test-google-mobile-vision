@@ -4,19 +4,25 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.widget.SwitchCompat;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.Toast;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import jp.co.thcomp.util.ToastUtil;
+import jp.eq_inc.testmobilevision.adapter.BarcodeFormatAdapter;
 import jp.eq_inc.testmobilevision.adapter.FrameRotationAdapter;
 import jp.eq_inc.testmobilevision.fragment.AbstractDetectFragment;
 import jp.eq_inc.testmobilevision.fragment.OnFragmentInteractionListener;
 
-public class FaceDetectActivity extends AbstractDetectActivity implements OnFragmentInteractionListener {
+public class BarcodeDetectFromCameraActivity extends AbstractDetectActivity implements OnFragmentInteractionListener {
     public static final String INTENT_STRING_PARAM_FRAGMENT_NAME = "INTENT_STRING_PARAM_FRAGMENT_NAME";
     public static final String INTENT_BUNDLE_PARAM_FRAGMENT_PARAM = "INTENT_BUNDLE_PARAM_FRAGMENT_PARAM";
     private AbstractDetectFragment mFragment;
@@ -45,10 +51,18 @@ public class FaceDetectActivity extends AbstractDetectActivity implements OnFrag
             finish();
         } else {
             super.onCreate(savedInstanceState);
-            setContentView(R.layout.activity_face_detect);
-            Spinner frameRotationSpinner = (Spinner) findViewById(R.id.spnrRotation);
-            frameRotationSpinner.setAdapter(new FrameRotationAdapter(this));
-            frameRotationSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            setContentView(R.layout.activity_barcode_detect_from_camera);
+
+            ((SwitchCompat) findViewById(R.id.scUseMultiProcessor)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
+            ((SwitchCompat) findViewById(R.id.scAutoFocus)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
+            ((SwitchCompat) findViewById(R.id.scFacing)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
+
+            ((EditText) findViewById(R.id.etDetectFps)).addTextChangedListener(mDetectFpsChangedListener);
+
+            // barcode format
+            Spinner barcodeFormatSpinner = (Spinner) findViewById(R.id.spnrBarcodeFormat);
+            barcodeFormatSpinner.setAdapter(new BarcodeFormatAdapter(this));
+            barcodeFormatSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                     mFragment.changeCommonParams();
@@ -58,11 +72,6 @@ public class FaceDetectActivity extends AbstractDetectActivity implements OnFrag
                 public void onNothingSelected(AdapterView<?> parent) {
                 }
             });
-            ((SwitchCompat) findViewById(R.id.scClassification)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
-            ((SwitchCompat) findViewById(R.id.scLandmark)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
-            ((SwitchCompat) findViewById(R.id.scDetectMode)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
-            ((SwitchCompat) findViewById(R.id.scProminentFaceOnly)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
-            ((SwitchCompat) findViewById(R.id.scFaceTracking)).setOnCheckedChangeListener(mSwitchCheckedChangeListener);
         }
     }
 
@@ -87,6 +96,28 @@ public class FaceDetectActivity extends AbstractDetectActivity implements OnFrag
         @Override
         public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
             mFragment.changeCommonParams();
+        }
+    };
+
+    private TextWatcher mDetectFpsChangedListener = new TextWatcher() {
+        @Override
+        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            // 処理なし
+        }
+
+        @Override
+        public void onTextChanged(CharSequence s, int start, int before, int count) {
+            // 処理なし
+        }
+
+        @Override
+        public void afterTextChanged(Editable s) {
+            try {
+                Float.parseFloat(s.toString());
+                mFragment.changeCommonParams();
+            } catch (NumberFormatException e) {
+                ToastUtil.showToast(BarcodeDetectFromCameraActivity.this, e.getLocalizedMessage(), Toast.LENGTH_LONG);
+            }
         }
     };
 }

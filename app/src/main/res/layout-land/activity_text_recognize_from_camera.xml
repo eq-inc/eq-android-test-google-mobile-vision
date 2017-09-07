@@ -25,41 +25,6 @@
                 android:textOn="@string/all_classification"
                 android:textOff="@string/no_classification"/>
             <android.support.v7.widget.SwitchCompat
-                android:id="@+id/scClassification"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/classification"
-                android:textOn="@string/all_classification"
-                android:textOff="@string/no_classification"/>
-            <android.support.v7.widget.SwitchCompat
-                android:id="@+id/scLandmark"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/landmark"
-                android:textOn="@string/all_landmark"
-                android:textOff="@string/no_landmark"/>
-            <android.support.v7.widget.SwitchCompat
-                android:id="@+id/scDetectMode"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/detect_mode"
-                android:textOn="@string/detect_mode_fast"
-                android:textOff="@string/detect_mode_accurate"/>
-            <android.support.v7.widget.SwitchCompat
-                android:id="@+id/scProminentFaceOnly"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/prominent_face_only"
-                android:textOn=""
-                android:textOff=""/>
-            <android.support.v7.widget.SwitchCompat
-                android:id="@+id/scFaceTracking"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/face_tracking"
-                android:textOn="@string/face_tracking_on"
-                android:textOff="@string/face_tracking_off"/>
-            <android.support.v7.widget.SwitchCompat
                 android:id="@+id/scAutoFocus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
