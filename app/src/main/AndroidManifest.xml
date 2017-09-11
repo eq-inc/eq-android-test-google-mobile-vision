@@ -20,6 +20,7 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <activity android:name=".AllDetectFromCameraActivity" android:windowSoftInputMode="stateAlwaysHidden" android:screenOrientation="landscape" />
         <activity android:name=".FaceDetectActivity" android:windowSoftInputMode="stateAlwaysHidden" />
         <activity android:name=".FaceDetectFromCameraActivity" android:windowSoftInputMode="stateAlwaysHidden" android:screenOrientation="landscape" />
         <activity android:name=".BarcodeDetectActivity" android:windowSoftInputMode="stateAlwaysHidden" />
