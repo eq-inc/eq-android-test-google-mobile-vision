@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import jp.co.thcomp.util.LogUtil;
@@ -352,6 +353,7 @@ public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
                         if (cacheDir.exists()) {
                             Calendar currentCalendar = Calendar.getInstance();
                             String fileName = String.format(
+                                    Locale.getDefault(),
                                     "%04d.%02d.%02d-%02d.%02d.%02d.%03d.jpg",
                                     currentCalendar.get(Calendar.YEAR),
                                     currentCalendar.get(Calendar.MONTH) + 1,
