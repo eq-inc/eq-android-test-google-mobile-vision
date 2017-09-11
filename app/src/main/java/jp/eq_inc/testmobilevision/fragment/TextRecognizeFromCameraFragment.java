@@ -118,7 +118,7 @@ public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
         getActivity().setRequestedOrientation(mReservedRequestedOrientation);
     }
 
-    private boolean initFaceDetector() {
+    private boolean initTextRecognizer() {
         boolean ret = false;
 
         try {
@@ -217,7 +217,7 @@ public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
         boolean ret = false;
 
         if (mStatus == Status.Init) {
-            if (initFaceDetector()) {
+            if (initTextRecognizer()) {
                 if (initCameraSource()) {
                     try {
                         mCameraSource.start(mCameraPreview.getHolder());
