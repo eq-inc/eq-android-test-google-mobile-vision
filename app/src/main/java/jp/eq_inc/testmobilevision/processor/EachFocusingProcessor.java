@@ -15,7 +15,7 @@ import jp.eq_inc.testmobilevision.detector.AllDetector;
 public class EachFocusingProcessor implements Detector.Processor {
     private FocusingProcessor[] mFocusingProcessorArray;
 
-    public EachFocusingProcessor(AllDetector detector, Tracker tracker) {
+    public EachFocusingProcessor(Detector detector, Tracker tracker) {
         mFocusingProcessorArray = new FocusingProcessor[]{
                 new LargestFaceFocusingProcessor(detector, tracker),
                 new BarcodeFocusingProcessor(detector, tracker),
@@ -43,7 +43,7 @@ public class EachFocusingProcessor implements Detector.Processor {
         }
     }
 
-    private static class BarcodeFocusingProcessor extends FocusingProcessor<Barcode> {
+    public static class BarcodeFocusingProcessor extends FocusingProcessor<Barcode> {
 
         public BarcodeFocusingProcessor(Detector<Barcode> detector, Tracker<Barcode> tracker) {
             super(detector, tracker);
@@ -68,7 +68,7 @@ public class EachFocusingProcessor implements Detector.Processor {
         }
     }
 
-    private static class TextFocusingProcessor extends FocusingProcessor<TextBlock> {
+    public static class TextFocusingProcessor extends FocusingProcessor<TextBlock> {
 
         public TextFocusingProcessor(Detector<TextBlock> detector, Tracker<TextBlock> tracker) {
             super(detector, tracker);

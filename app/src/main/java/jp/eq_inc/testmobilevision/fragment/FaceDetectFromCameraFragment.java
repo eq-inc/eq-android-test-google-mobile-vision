@@ -299,8 +299,6 @@ public class FaceDetectFromCameraFragment extends AbstractDetectFragment {
         previewOverlayParams.width = width;
         previewOverlayParams.height = height;
         parentViewGroup.updateViewLayout(mPreviewOverlay, previewOverlayParams);
-
-        mShownPreviewSize.set(width, height);
     }
 
     private ViewTreeObserver.OnGlobalLayoutListener mParentViewGroupLayoutListener = new ViewTreeObserver.OnGlobalLayoutListener() {
@@ -334,6 +332,8 @@ public class FaceDetectFromCameraFragment extends AbstractDetectFragment {
         public void onGlobalLayout() {
             mPreviewOverlay.bringToFront();
             mPreviewOverlay.getViewTreeObserver().removeOnGlobalLayoutListener(mPreviewOverlayLayoutListener);
+
+            mShownPreviewSize.set(mPreviewOverlay.getWidth(), mPreviewOverlay.getHeight());
             start();
         }
     };

@@ -9,26 +9,32 @@ import android.graphics.Paint;
 import android.graphics.PointF;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.SwitchCompat;
 import android.util.DisplayMetrics;
-import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.google.android.gms.common.images.Size;
 import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Detector;
-import com.google.android.gms.vision.FocusingProcessor;
 import com.google.android.gms.vision.Frame;
+import com.google.android.gms.vision.MultiDetector;
 import com.google.android.gms.vision.MultiProcessor;
 import com.google.android.gms.vision.Tracker;
+import com.google.android.gms.vision.barcode.Barcode;
+import com.google.android.gms.vision.barcode.BarcodeDetector;
+import com.google.android.gms.vision.face.Face;
+import com.google.android.gms.vision.face.FaceDetector;
+import com.google.android.gms.vision.face.LargestFaceFocusingProcessor;
 import com.google.android.gms.vision.text.Text;
 import com.google.android.gms.vision.text.TextBlock;
 import com.google.android.gms.vision.text.TextRecognizer;
@@ -43,11 +49,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import jp.co.thcomp.util.LogUtil;
 import jp.eq_inc.testmobilevision.R;
+import jp.eq_inc.testmobilevision.detector.AllDetector;
+import jp.eq_inc.testmobilevision.processor.EachFocusingProcessor;
 import jp.eq_inc.testmobilevision.view.GraphicOverlay;
 
-public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
+public class MultiDetectFromCameraFragment extends AbstractDetectFragment {
     private enum Status {
         Init, Recognizing,
     }
@@ -55,21 +62,21 @@ public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
     private SurfaceView mCameraPreview;
     private GraphicOverlay mPreviewOverlay;
     private TextView mDetectedInformationTv;
-    private TextRecognizer mTextRecognizer;
+    private MultiDetector mMultiDetector;
     private CameraSource mCameraSource;
     private Status mStatus = Status.Init;
-    private HashMap<TextTracker, TextBlock> mDrawTextBlockMap = new HashMap<TextTracker, TextBlock>();
+    private HashMap<AbstractLocalTracker, Object> mDrawObjectMap = new HashMap<AbstractLocalTracker, Object>();
     private int mReservedRequestedOrientation = 0;
     private Size mRealPreviewSize = null;
     private PointF mShownPreviewSize = new PointF();
     private boolean mTakingPicture = false;
 
-    public TextRecognizeFromCameraFragment() {
+    public MultiDetectFromCameraFragment() {
         // Required empty public constructor
     }
 
-    public static TextRecognizeFromCameraFragment newInstance(Bundle param) {
-        TextRecognizeFromCameraFragment fragment = new TextRecognizeFromCameraFragment();
+    public static MultiDetectFromCameraFragment newInstance(Bundle param) {
+        MultiDetectFromCameraFragment fragment = new MultiDetectFromCameraFragment();
         fragment.setArguments(param);
         return fragment;
     }
@@ -84,13 +91,13 @@ public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        View view = inflater.inflate(R.layout.fragment_text_recognize_from_camera, container, false);
+        View view = inflater.inflate(R.layout.fragment_multi_detect_from_camera, container, false);
 
         mCameraPreview = (SurfaceView) view.findViewById(R.id.svCameraPreview);
         mPreviewOverlay = (GraphicOverlay) view.findViewById(R.id.goPreviewOverlay);
         mPreviewOverlay.setOnDrawListener(mPreviewOverlayListener);
         mPreviewOverlay.setOnClickListener(mPreviewOverlayClickListener);
-        mDetectedInformationTv = (TextView) view.findViewById(R.id.tvFaceInformation);
+        mDetectedInformationTv = (TextView) view.findViewById(R.id.tvDetectInformation);
 
         ViewGroup cameraPreviewContainer = (ViewGroup) view.findViewById(R.id.flCameraPreviewContainer);
         cameraPreviewContainer.getViewTreeObserver().addOnGlobalLayoutListener(mParentViewGroupLayoutListener);
@@ -119,45 +126,85 @@ public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
         getActivity().setRequestedOrientation(mReservedRequestedOrientation);
     }
 
-    private boolean initTextRecognizer() {
+    private boolean initAllDetector() {
         boolean ret = false;
 
         try {
             Activity activity = getActivity();
 
-            if (mTextRecognizer != null) {
-                mTextRecognizer.release();
-                mTextRecognizer = null;
+            if (mMultiDetector != null) {
+                mMultiDetector.release();
+                mMultiDetector = null;
             }
-            mTextRecognizer = new TextRecognizer.Builder(activity).build();
+            MultiDetector.Builder builder = new MultiDetector.Builder();
+            FaceDetector.Builder faceDetectBuilder = new FaceDetector.Builder(activity);
+            BarcodeDetector.Builder barcodeDetectBuilder = new BarcodeDetector.Builder(activity);
+            TextRecognizer.Builder textRecognizerBuilder = new TextRecognizer.Builder(activity);
+
+            // classification
+            SwitchCompat tempSwitch = (SwitchCompat) activity.findViewById(R.id.scClassification);
+            if (tempSwitch.isChecked()) {
+                faceDetectBuilder.setClassificationType(FaceDetector.ALL_CLASSIFICATIONS);
+            } else {
+                faceDetectBuilder.setClassificationType(FaceDetector.NO_CLASSIFICATIONS);
+            }
+
+            // landmark
+            tempSwitch = (SwitchCompat) activity.findViewById(R.id.scLandmark);
+            if (tempSwitch.isChecked()) {
+                faceDetectBuilder.setLandmarkType(FaceDetector.ALL_LANDMARKS);
+            } else {
+                faceDetectBuilder.setLandmarkType(FaceDetector.NO_LANDMARKS);
+            }
+
+            // mode
+            tempSwitch = (SwitchCompat) activity.findViewById(R.id.scDetectMode);
+            if (tempSwitch.isChecked()) {
+                faceDetectBuilder.setMode(FaceDetector.FAST_MODE);
+            } else {
+                faceDetectBuilder.setMode(FaceDetector.ACCURATE_MODE);
+            }
+
+            // prominent face only
+            tempSwitch = (SwitchCompat) activity.findViewById(R.id.scProminentFaceOnly);
+            faceDetectBuilder.setProminentFaceOnly(tempSwitch.isChecked());
+
+            // face tracking
+            tempSwitch = (SwitchCompat) activity.findViewById(R.id.scFaceTracking);
+            faceDetectBuilder.setTrackingEnabled(tempSwitch.isChecked());
+
+            // barcode format
+            Integer selectedFormat = (Integer) ((Spinner) activity.findViewById(R.id.spnrBarcodeFormat)).getSelectedItem();
+            if (selectedFormat == null) {
+                selectedFormat = Barcode.ALL_FORMATS;
+            }
+            barcodeDetectBuilder.setBarcodeFormats(selectedFormat);
+
+            FaceDetector faceDetector = faceDetectBuilder.build();
+            BarcodeDetector barcodeDetector = barcodeDetectBuilder.build();
+            TextRecognizer textRecognizer = textRecognizerBuilder.build();
 
             // use multi processor
-            SwitchCompat tempSwitch = (SwitchCompat) activity.findViewById(R.id.scUseMultiProcessor);
+            tempSwitch = (SwitchCompat) activity.findViewById(R.id.scUseMultiProcessor);
             if (tempSwitch.isChecked()) {
-                MultiProcessor.Builder<TextBlock> multiProcessorBuilder = new MultiProcessor.Builder<TextBlock>(mMultiProcessFactory);
-                mTextRecognizer.setProcessor(multiProcessorBuilder.build());
+                MultiProcessor.Builder multiProcessorBuilder = new MultiProcessor.Builder(mMultiProcessFactory);
+                MultiProcessor processor = multiProcessorBuilder.build();
+                faceDetector.setProcessor(processor);
+                barcodeDetector.setProcessor(processor);
+                textRecognizer.setProcessor(processor);
             } else {
-                FocusingProcessor<TextBlock> focusingProcessor = new FocusingProcessor<TextBlock>(mTextRecognizer, new TextTracker()) {
-                    @Override
-                    public int selectFocus(Detector.Detections<TextBlock> detections) {
-                        SparseArray<TextBlock> detectedItems = detections.getDetectedItems();
-                        int selectedItem = 0;
-                        int largestSize = 0;
-                        for (int i = 0, size = detectedItems.size(); i < size; i++) {
-                            TextBlock detectedItem = detectedItems.valueAt(i);
-                            Rect bounds = detectedItem.getBoundingBox();
-                            int tempBoundsSize = bounds.width() * bounds.height();
-                            if (largestSize < tempBoundsSize) {
-                                largestSize = tempBoundsSize;
-                                selectedItem = detectedItems.keyAt(i);
-                            }
-                        }
-
-                        return selectedItem;
-                    }
-                };
-                mTextRecognizer.setProcessor(focusingProcessor);
+                LargestFaceFocusingProcessor faceProcessor = new LargestFaceFocusingProcessor(faceDetector, new FaceTracker());
+                faceDetector.setProcessor(faceProcessor);
+                EachFocusingProcessor.BarcodeFocusingProcessor barcodeProcessor = new EachFocusingProcessor.BarcodeFocusingProcessor(barcodeDetector, new BarcodeTracker());
+                barcodeDetector.setProcessor(barcodeProcessor);
+                EachFocusingProcessor.TextFocusingProcessor textProcessor = new EachFocusingProcessor.TextFocusingProcessor(textRecognizer, new TextBlockTracker());
+                textRecognizer.setProcessor(textProcessor);
             }
+
+            builder.add(faceDetector);
+            builder.add(barcodeDetector);
+            builder.add(textRecognizer);
+            mMultiDetector = builder.build();
 
             ret = true;
         } catch (Exception e) {
@@ -178,7 +225,7 @@ public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
                 mCameraSource.release();
                 mCameraSource = null;
             }
-            CameraSource.Builder builder = new CameraSource.Builder(activity, mTextRecognizer);
+            CameraSource.Builder builder = new CameraSource.Builder(activity, mMultiDetector);
 
             // previewサイズ
             builder.setRequestedPreviewSize(mCameraPreview.getWidth(), mCameraPreview.getHeight());
@@ -218,7 +265,7 @@ public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
         boolean ret = false;
 
         if (mStatus == Status.Init) {
-            if (initTextRecognizer()) {
+            if (initAllDetector()) {
                 if (initCameraSource()) {
                     try {
                         mCameraSource.start(mCameraPreview.getHolder());
@@ -238,9 +285,9 @@ public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
         boolean ret = false;
 
         if (mStatus == Status.Recognizing) {
-            if (mTextRecognizer != null) {
-                mTextRecognizer.release();
-                mTextRecognizer = null;
+            if (mMultiDetector != null) {
+                mMultiDetector.release();
+                mMultiDetector = null;
             }
             if (mCameraSource != null) {
                 mCameraSource.stop();
@@ -327,10 +374,10 @@ public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
         }
     };
 
-    private MultiProcessor.Factory<TextBlock> mMultiProcessFactory = new MultiProcessor.Factory<TextBlock>() {
+    private MultiProcessor.Factory mMultiProcessFactory = new MultiProcessor.Factory() {
         @Override
-        public Tracker<TextBlock> create(TextBlock textBlock) {
-            return new TextTracker();
+        public Tracker create(Object o) {
+            return new AllTracker();
         }
     };
 
@@ -398,29 +445,30 @@ public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
             canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
 
             StringBuilder builder = new StringBuilder();
-            for (Map.Entry<TextTracker, TextBlock> entry : mDrawTextBlockMap.entrySet()) {
-                TextTracker tracker = entry.getKey();
+            for (Map.Entry<AbstractLocalTracker, Object> entry : mDrawObjectMap.entrySet()) {
+                AbstractLocalTracker tracker = entry.getKey();
 
                 if (tracker.mVisible) {
-                    TextBlock textBlock = entry.getValue();
+                    Object item = entry.getValue();
 
                     if (mRealPreviewSize != null) {
                         float xRate = mShownPreviewSize.x / mRealPreviewSize.getWidth();
                         float yRate = mShownPreviewSize.y / mRealPreviewSize.getHeight();
+                        RectF bound = tracker.getBounds(item);
 
-                        List<? extends Text> childTextComponentList = textBlock.getComponents();
-                        boolean haveChildTextComponent = ((childTextComponentList != null) && (childTextComponentList.size() > 0));
-                        Rect textBlockBound = textBlock.getBoundingBox();
+                        MultiDetectFromCameraFragment.this.drawQuadLine(canvas, null, bound.left * xRate, bound.top * yRate, bound.width() * xRate, bound.height() * yRate, tracker.mLinePaint, Frame.ROTATION_0);
 
-                        TextRecognizeFromCameraFragment.this.drawQuadLine(canvas, null, textBlockBound.left * xRate, textBlockBound.top * yRate, textBlockBound.width() * xRate, textBlockBound.height() * yRate, tracker.mLinePaint, Frame.ROTATION_0);
+                        if (item instanceof TextBlock) {
+                            List<? extends Text> childTextComponentList = ((TextBlock) item).getComponents();
+                            boolean haveChildTextComponent = ((childTextComponentList != null) && (childTextComponentList.size() > 0));
 
-                        if(haveChildTextComponent){
-                            expandTextComponent(canvas, Frame.ROTATION_0, xRate, yRate, 1, childTextComponentList);
+                            if (haveChildTextComponent) {
+                                expandTextComponent(canvas, Frame.ROTATION_0, xRate, yRate, 1, childTextComponentList);
+                            }
                         }
                     }
 
-                    builder.append("Value: ").append(textBlock.getValue()).append("\n");
-
+                    builder.append(tracker.logOutput(item));
                 }
             }
 
@@ -460,11 +508,19 @@ public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
         }
     }
 
-    private class TextTracker extends Tracker<TextBlock> {
-        private Paint mLinePaint;
-        private boolean mVisible = false;
+    private interface TrackerCommonIf {
+        String getDisplayValue(Object item);
 
-        public TextTracker() {
+        RectF getBounds(Object item);
+
+        String logOutput(Object item);
+    }
+
+    abstract private class AbstractLocalTracker<T> extends Tracker<T> implements TrackerCommonIf {
+        protected Paint mLinePaint;
+        protected boolean mVisible = false;
+
+        public AbstractLocalTracker() {
             super();
             mLinePaint = new Paint();
             mLinePaint.setStrokeWidth(getResources().getDimensionPixelSize(R.dimen.face_line_width));
@@ -472,30 +528,24 @@ public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
         }
 
         @Override
-        public void onNewItem(int i, TextBlock textBlock) {
-            LogUtil.d("", "onNewItem: " + textBlock.getValue());
-
-            super.onNewItem(i, textBlock);
+        public void onNewItem(int i, T o) {
+            super.onNewItem(i, o);
             mVisible = true;
-            mDrawTextBlockMap.put(this, textBlock);
+            mDrawObjectMap.put(this, o);
             mPreviewOverlay.postInvalidate();
         }
 
         @Override
-        public void onUpdate(Detector.Detections<TextBlock> detections, TextBlock textBlock) {
-            super.onUpdate(detections, textBlock);
-
+        public void onUpdate(Detector.Detections<T> detections, T o) {
+            super.onUpdate(detections, o);
             mVisible = true;
-            mDrawTextBlockMap.put(this, textBlock);
+            mDrawObjectMap.put(this, o);
             mPreviewOverlay.postInvalidate();
         }
 
         @Override
-        public void onMissing(Detector.Detections<TextBlock> detections) {
-            if (mDrawTextBlockMap.containsKey(this)) {
-                LogUtil.d("", "onMissing: " + mDrawTextBlockMap.get(this).getValue());
-            }
-
+        public void onMissing(Detector.Detections<T> detections) {
+            super.onMissing(detections);
             super.onMissing(detections);
             mVisible = false;
             mPreviewOverlay.postInvalidate();
@@ -503,12 +553,156 @@ public class TextRecognizeFromCameraFragment extends AbstractDetectFragment {
 
         @Override
         public void onDone() {
-            if (mDrawTextBlockMap.containsKey(this)) {
-                LogUtil.d("", "onDone: " + mDrawTextBlockMap.get(this).getValue());
+            super.onDone();
+            mDrawObjectMap.remove(this);
+        }
+    }
+
+    private class AllTracker extends AbstractLocalTracker {
+        private TrackerCommonIf[] mTrackerArray;
+
+        public AllTracker() {
+            mTrackerArray = new TrackerCommonIf[]{
+                    new FaceTracker(),
+                    new BarcodeTracker(),
+                    new TextBlockTracker(),
+            };
+        }
+
+        @Override
+        public String getDisplayValue(Object item) {
+            AllDetector.DetectorType detectorType = AllDetector.DetectorType.getDetectorTypeFromItem(item);
+            return mTrackerArray[detectorType.ordinal()].getDisplayValue(item);
+        }
+
+        @Override
+        public RectF getBounds(Object item) {
+            AllDetector.DetectorType detectorType = AllDetector.DetectorType.getDetectorTypeFromItem(item);
+            return mTrackerArray[detectorType.ordinal()].getBounds(item);
+        }
+
+        @Override
+        public String logOutput(Object item) {
+            AllDetector.DetectorType detectorType = AllDetector.DetectorType.getDetectorTypeFromItem(item);
+            return mTrackerArray[detectorType.ordinal()].logOutput(item);
+        }
+    }
+
+    private class FaceTracker extends Tracker<Face> implements TrackerCommonIf {
+        @Override
+        public String getDisplayValue(Object item) {
+            String ret = null;
+
+            if ((item != null) && (item instanceof Face)) {
+                ret = String.valueOf(((Face) item).getId());
             }
 
-            super.onDone();
-            mDrawTextBlockMap.remove(this);
+            return ret;
+        }
+
+        @Override
+        public RectF getBounds(Object item) {
+            RectF ret = null;
+
+            if ((item != null) && (item instanceof Face)) {
+                Face castedItem = (Face) item;
+                PointF position = castedItem.getPosition();
+                ret = new RectF(position.x, position.y, position.x + castedItem.getWidth(), position.y + castedItem.getHeight());
+            }
+
+            return ret;
+        }
+
+        @Override
+        public String logOutput(Object item) {
+            String ret = null;
+
+            if (item != null && item instanceof Face) {
+                StringBuilder tempRet = logOutputFace(null, 0, (Face) item);
+                if (tempRet != null) {
+                    ret = tempRet.toString();
+                }
+            }
+
+            return ret;
+        }
+    }
+
+    private class BarcodeTracker extends Tracker<Barcode> implements TrackerCommonIf {
+        @Override
+        public String getDisplayValue(Object item) {
+            String ret = null;
+
+            if ((item != null) && (item instanceof Barcode)) {
+                ret = ((Barcode) item).displayValue;
+            }
+
+            return ret;
+        }
+
+        @Override
+        public RectF getBounds(Object item) {
+            RectF ret = null;
+
+            if ((item != null) && (item instanceof Barcode)) {
+                Rect bounds = ((Barcode) item).getBoundingBox();
+                ret = new RectF(bounds.left, bounds.top, bounds.right, bounds.bottom);
+            }
+
+            return ret;
+        }
+
+        @Override
+        public String logOutput(Object item) {
+            String ret = "";
+
+            if (item != null && item instanceof Barcode) {
+                StringBuilder tempRet = logOutputBarcode(null, 0, (Barcode) item);
+                if (tempRet != null) {
+                    ret = tempRet.toString();
+                }
+            }
+
+            return ret;
+        }
+    }
+
+    private class TextBlockTracker extends Tracker<TextBlock> implements TrackerCommonIf {
+        @Override
+        public String getDisplayValue(Object item) {
+            String ret = null;
+
+            if ((item != null) && (item instanceof Barcode)) {
+                ret = ((TextBlock) item).getValue();
+            }
+
+            return ret;
+        }
+
+        @Override
+        public RectF getBounds(Object item) {
+            RectF ret = null;
+
+            if ((item != null) && (item instanceof TextBlock)) {
+                Rect bounds = ((TextBlock) item).getBoundingBox();
+                ret = new RectF(bounds.left, bounds.top, bounds.right, bounds.bottom);
+            }
+
+            return ret;
+        }
+
+        @Override
+        public String logOutput(Object item) {
+            String ret = "";
+
+            if (item != null && item instanceof TextBlock) {
+                StringBuilder tempRet = logOutputTextBlock(null, 0, (TextBlock) item);
+                if (tempRet != null) {
+                    ret = tempRet.toString();
+                }
+            }
+
+            return ret;
         }
     }
 }
