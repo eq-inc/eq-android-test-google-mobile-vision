@@ -1,4 +1,4 @@
-package jp.eq_inc.testmobilevision.processor;
+package jp.eq_inc.mobilevision.processor;
 
 import android.graphics.Rect;
 import android.util.SparseArray;
@@ -10,7 +10,7 @@ import com.google.android.gms.vision.barcode.Barcode;
 import com.google.android.gms.vision.face.LargestFaceFocusingProcessor;
 import com.google.android.gms.vision.text.TextBlock;
 
-import jp.eq_inc.testmobilevision.detector.AllDetector;
+import jp.eq_inc.mobilevision.detector.AllDetector;
 
 public class EachFocusingProcessor implements Detector.Processor {
     private FocusingProcessor[] mFocusingProcessorArray;

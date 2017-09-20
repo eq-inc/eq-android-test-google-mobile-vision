@@ -1,9 +1,12 @@
 package jp.eq_inc.mobilevisionwrapper;
 
-
 import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
+import android.opengl.EGL14;
+import android.opengl.EGLDisplay;
+import android.opengl.EGLExt;
+import android.opengl.EGLSurface;
 import android.opengl.GLES20;
 import android.opengl.GLES30;
 import android.util.Log;
@@ -12,110 +15,29 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.Frame;
+import com.google.android.gms.vision.barcode.BarcodeDetector;
 import com.google.android.gms.vision.face.Face;
 import com.google.android.gms.vision.face.FaceDetector;
+import com.google.android.gms.vision.text.TextRecognizer;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.IntBuffer;
 
-public class Accessor {
-    public Frame.Builder getFrameBuilder() {
-        return new Frame.Builder();
-    }
+import jp.eq_inc.mobilevision.detector.AllDetector;
 
-    public static SparseArray<Face> detectFaceForUnity(Activity activity) {
-        return detectFaceForUnity(activity, null);
-    }
+public abstract class Accessor {
+    protected Activity mActivity;
+    protected FaceDetector.Builder mFaceDetectBuilder;
+    protected BarcodeDetector.Builder mBarcodeDetectBuilder;
+    protected TextRecognizer.Builder mTextRecognizeBuilder;
+    protected Thread mDetectThread;
 
-    public static SparseArray<Face> detectFaceForUnity(Activity activity, FaceDetector.Builder faceDetectorBuilder) {
-        SparseArray<Face> ret = null;
-        View decorView = activity.getWindow().getDecorView();
-        SurfaceView surfaceView = findSurfaceView(decorView);
-
-        if (surfaceView != null) {
-            Rect frameRect = surfaceView.getHolder().getSurfaceFrame();
-            int[] buffer = new int[frameRect.width() * frameRect.height() /* (Integer.SIZE / Byte.SIZE)*/];
-            IntBuffer pixelByteBuffer = IntBuffer.wrap(buffer);
-            GLES30.glReadBuffer(GLES20.GL_BACK);
-            GLES30.glReadPixels(0, 0, frameRect.width(), frameRect.height(), GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, pixelByteBuffer);
-
-            int[] frameByteArray = pixelByteBuffer.array();
-            Bitmap frameBitmap = null;
-
-            try {
-                frameBitmap = Bitmap.createBitmap(frameByteArray, frameRect.width(), frameRect.height(), Bitmap.Config.ARGB_8888);
-                Log.d("", "frameBitmap = " + frameBitmap);
-
-//                if(frameBitmap == null){
-//                    pixelByteBuffer = IntBuffer.wrap(buffer);
-//                    GLES30.glReadBuffer(GLES20.GL_FRONT);
-//                    GLES30.glReadPixels(0, 0, frameRect.width(), frameRect.height(), GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, pixelByteBuffer);
-//                    Log.d("",
-//                            String.format(
-//                                    "%X %X %X %X %X %X %X %X %X %X %X %X %X %X %X %X",
-//                                    buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7],
-//                                    buffer[8], buffer[9], buffer[10], buffer[11], buffer[12], buffer[13], buffer[14], buffer[15]));
-//                    frameByteArray = pixelByteBuffer.array();
-//                    frameBitmap = Bitmap.createBitmap(frameByteArray, frameRect.width(), frameRect.height(), Bitmap.Config.ARGB_8888);
-//                    Log.d("", "frameBitmap2 = " + frameBitmap);
-//                }
-//
-//                if(frameBitmap == null){
-//                    pixelByteBuffer = IntBuffer.wrap(buffer);
-//                    GLES30.glReadBuffer(GLES20.GL_FRONT_AND_BACK);
-//                    GLES30.glReadPixels(0, 0, frameRect.width(), frameRect.height(), GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, pixelByteBuffer);
-//                    Log.d("",
-//                            String.format(
-//                                    "%X %X %X %X %X %X %X %X %X %X %X %X %X %X %X %X",
-//                                    buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7],
-//                                    buffer[8], buffer[9], buffer[10], buffer[11], buffer[12], buffer[13], buffer[14], buffer[15]));
-//                    frameByteArray = pixelByteBuffer.array();
-//                    frameBitmap = Bitmap.createBitmap(frameByteArray, frameRect.width(), frameRect.height(), Bitmap.Config.ARGB_8888);
-//                    Log.d("", "frameBitmap3 = " + frameBitmap);
-//                }
-//
-//                if(frameBitmap == null){
-//                    pixelByteBuffer = IntBuffer.wrap(buffer);
-//                    GLES30.glReadBuffer(GLES20.GL_FRONT_FACE);
-//                    GLES30.glReadPixels(0, 0, frameRect.width(), frameRect.height(), GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, pixelByteBuffer);
-//                    Log.d("",
-//                            String.format(
-//                                    "%X %X %X %X %X %X %X %X %X %X %X %X %X %X %X %X",
-//                                    buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7],
-//                                    buffer[8], buffer[9], buffer[10], buffer[11], buffer[12], buffer[13], buffer[14], buffer[15]));
-//                    frameByteArray = pixelByteBuffer.array();
-//                    frameBitmap = Bitmap.createBitmap(frameByteArray, frameRect.width(), frameRect.height(), Bitmap.Config.ARGB_8888);
-//                    Log.d("", "frameBitmap4 = " + frameBitmap);
-//                }
-
-                Frame.Builder frameBuilder = new Frame.Builder();
-                frameBuilder.setBitmap(frameBitmap);
-                Frame frame = frameBuilder.build();
-
-                if (faceDetectorBuilder == null) {
-                    faceDetectorBuilder = new FaceDetector.Builder(activity);
-                }
-
-                FaceDetector faceDetector = null;
-                try {
-                    faceDetector = faceDetectorBuilder.build();
-                    ret = faceDetector.detect(frame);
-                } finally {
-                    if (faceDetector != null) {
-                        faceDetector.release();
-                    }
-                }
-            } finally {
-                if (frameBitmap != null) {
-                    frameBitmap.recycle();
-                    frameBitmap = null;
-                }
-            }
-        } else {
-            Log.e(Accessor.class.getSimpleName(), "not found SurfaceView");
-        }
-
-        return ret;
+    public static Accessor createAccessorForUnity(Activity activity) {
+        return new AccessorForUnity(activity);
     }
 
     private static SurfaceView findSurfaceView(View rootView) {
@@ -138,77 +60,162 @@ public class Accessor {
         return ret;
     }
 
-    public interface OnDetectedItemListener {
-        public void onDetected(SparseArray<Face> result);
+    abstract public void startDetect(int intervalMS, OnDetectedItemListener faceDetectListener, OnDetectedItemListener barcodeDetectListener, OnDetectedItemListener textRecognizeListener);
+
+    private Accessor(Activity activity) {
+        if (activity == null) {
+            throw new NullPointerException("activity == null");
+        }
+
+        mActivity = activity;
+        mFaceDetectBuilder = new FaceDetector.Builder(activity);
+        mBarcodeDetectBuilder = new BarcodeDetector.Builder(activity);
+        mTextRecognizeBuilder = new TextRecognizer.Builder(activity);
     }
 
-    private Thread mDetectThread;
+    public void setClassificationType(int classificationType) {
+        mFaceDetectBuilder.setClassificationType(classificationType);
+    }
 
-    public void startDetectFace(final Activity activity, final FaceDetector.Builder builder, final int intervalMS, final OnDetectedItemListener listener) {
-        if (mDetectThread == null) {
-            mDetectThread = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    View decorView = activity.getWindow().getDecorView();
-                    SurfaceView surfaceView = findSurfaceView(decorView);
-                    FaceDetector.Builder faceDetectorBuilder = builder;
+    public void setLandmarkType(int landmarkType) {
+        mFaceDetectBuilder.setLandmarkType(landmarkType);
+    }
 
-                    if (surfaceView != null) {
-                        if (faceDetectorBuilder == null) {
-                            faceDetectorBuilder = new FaceDetector.Builder(activity);
-                        }
+    public void setMinFaceSize(float proportionalMinFaceSize) {
+        mFaceDetectBuilder.setMinFaceSize(proportionalMinFaceSize);
+    }
 
-                        FaceDetector faceDetector = faceDetectorBuilder.build();
+    public void setMode(int mode) {
+        mFaceDetectBuilder.setMode(mode);
+    }
 
-                        if (faceDetector != null) {
-                            Rect frameRect = surfaceView.getHolder().getSurfaceFrame();
-                            int[] buffer = new int[frameRect.width() * frameRect.height()];
+    public void setProminentFaceOnly(boolean prominentFaceOnly) {
+        mFaceDetectBuilder.setProminentFaceOnly(prominentFaceOnly);
+    }
 
-                            while (mDetectThread != null) {
-                                SparseArray<Face> ret = null;
-                                IntBuffer pixelByteBuffer = IntBuffer.wrap(buffer);
-                                GLES30.glReadBuffer(GLES20.GL_BACK);
-                                GLES30.glReadPixels(0, 0, frameRect.width(), frameRect.height(), GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, pixelByteBuffer);
+    public void setTrackingEnabled(boolean trackingEnabled) {
+        mFaceDetectBuilder.setTrackingEnabled(trackingEnabled);
+    }
 
-                                int[] frameByteArray = pixelByteBuffer.array();
-                                Bitmap frameBitmap = null;
+    public void setBarcodeFormats(int format) {
+        mBarcodeDetectBuilder.setBarcodeFormats(format);
+    }
 
-                                try {
-                                    frameBitmap = Bitmap.createBitmap(frameByteArray, frameRect.width(), frameRect.height(), Bitmap.Config.ARGB_8888);
-                                    Log.d("", "frameBitmap = " + frameBitmap);
+    public interface OnDetectedItemListener {
+        void onDetected(SparseArray<Face> result);
+    }
 
-                                    Frame.Builder frameBuilder = new Frame.Builder();
-                                    frameBuilder.setBitmap(frameBitmap);
-                                    Frame frame = frameBuilder.build();
+    private static class AccessorForUnity extends Accessor {
+        private AccessorForUnity(Activity activity) {
+            super(activity);
+        }
 
-                                    ret = faceDetector.detect(frame);
-                                    listener.onDetected(ret);
-                                } finally {
-                                    if (frameBitmap != null) {
-                                        frameBitmap.recycle();
-                                        frameBitmap = null;
-                                    }
-                                }
+        @Override
+        public void startDetect(final int intervalMS, final OnDetectedItemListener faceDetectListener, final OnDetectedItemListener barcodeDetectListener, final OnDetectedItemListener textRecognizeListener) {
+            if (mDetectThread == null) {
+                mDetectThread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        View decorView = mActivity.getWindow().getDecorView();
+                        SurfaceView surfaceView = findSurfaceView(decorView);
 
-                                synchronized (Accessor.this) {
-                                    try {
-                                        Accessor.this.wait(intervalMS);
-                                    } catch (InterruptedException e) {
-                                        e.printStackTrace();
-                                    }
-                                }
+                        if (surfaceView != null) {
+                            int detectorTypeCount = AllDetector.DetectorType.values().length;
+                            OnDetectedItemListener[] listenerArray = new OnDetectedItemListener[detectorTypeCount];
+                            Detector[] detectorArray = new Detector[detectorTypeCount];
+                            boolean noDetector = true;
+
+                            if (faceDetectListener != null) {
+                                detectorArray[AllDetector.DetectorType.Face.ordinal()] = mFaceDetectBuilder.build();
+                                listenerArray[AllDetector.DetectorType.Face.ordinal()] = faceDetectListener;
+                                noDetector = false;
                             }
+                            if (barcodeDetectListener != null) {
+                                detectorArray[AllDetector.DetectorType.Barcode.ordinal()] = mBarcodeDetectBuilder.build();
+                                listenerArray[AllDetector.DetectorType.Barcode.ordinal()] = barcodeDetectListener;
+                                noDetector = false;
+                            }
+                            if (textRecognizeListener != null) {
+                                detectorArray[AllDetector.DetectorType.Text.ordinal()] = mTextRecognizeBuilder.build();
+                                listenerArray[AllDetector.DetectorType.Text.ordinal()] = textRecognizeListener;
+                                noDetector = false;
+                            }
+
+                            if (!noDetector) {
+                                Rect frameRect = surfaceView.getHolder().getSurfaceFrame();
+                                int[] buffer = new int[frameRect.width() * frameRect.height()];
+
+                                int frameIndex = 0;
+                                while (mDetectThread != null) {
+                                    SparseArray ret = null;
+                                    IntBuffer pixelByteBuffer = IntBuffer.wrap(buffer);
+                                    GLES30.glReadBuffer(GLES20.GL_FRONT_FACE);
+                                    GLES30.glReadPixels(0, 0, frameRect.width(), frameRect.height(), GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, pixelByteBuffer);
+
+                                    int[] frameByteArray = pixelByteBuffer.array();
+                                    Bitmap frameBitmap = null;
+
+                                    try {
+                                        frameBitmap = Bitmap.createBitmap(frameByteArray, frameRect.width(), frameRect.height(), Bitmap.Config.ARGB_8888);
+                                        if (frameIndex < 100) {
+                                            FileOutputStream fileOutStream = null;
+                                            try {
+                                                fileOutStream = new FileOutputStream(String.format("/mnt/sdcard/frame_%04d.png", frameIndex++));
+                                                frameBitmap.compress(Bitmap.CompressFormat.PNG, 100, fileOutStream);
+                                            } catch (FileNotFoundException e) {
+                                                e.printStackTrace();
+                                            } finally {
+                                                if (fileOutStream != null) {
+                                                    try {
+                                                        fileOutStream.close();
+                                                    } catch (IOException e) {
+                                                        e.printStackTrace();
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        Log.d("", "frameBitmap = " + frameBitmap);
+
+                                        Frame.Builder frameBuilder = new Frame.Builder();
+                                        frameBuilder.setBitmap(frameBitmap);
+                                        Frame frame = frameBuilder.build();
+
+                                        for (int i = 0; i < detectorTypeCount; i++) {
+                                            if (detectorArray[i] != null) {
+                                                ret = detectorArray[i].detect(frame);
+                                                listenerArray[i].onDetected(ret);
+                                            }
+                                        }
+                                    } finally {
+                                        if (frameBitmap != null) {
+                                            frameBitmap.recycle();
+                                            frameBitmap = null;
+                                        }
+                                    }
+
+                                    synchronized (AccessorForUnity.this) {
+                                        try {
+                                            AccessorForUnity.this.wait(intervalMS);
+                                        } catch (InterruptedException e) {
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                }
+                            } else {
+                                Log.d(Accessor.class.getSimpleName(), "no listener, finished");
+                            }
+                        } else {
+                            Log.e(Accessor.class.getSimpleName(), "not found SurfaceView");
                         }
-                    } else {
-                        Log.e(Accessor.class.getSimpleName(), "not found SurfaceView");
                     }
-                }
-            });
-            mDetectThread.start();
+                });
+                mDetectThread.start();
+            }
         }
     }
 
-    public void stopDetectFace() {
+
+    public void stopDetect() {
         if (mDetectThread != null) {
             mDetectThread = null;
         }

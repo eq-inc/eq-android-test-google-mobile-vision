@@ -1,1 +1,1 @@
-include ':app', ':mobilevisionwrapperforunity'
+include ':app', ':mobilevisionwrapperforunity', ':common'

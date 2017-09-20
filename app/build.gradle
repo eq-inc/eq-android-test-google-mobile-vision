@@ -41,4 +41,5 @@ dependencies {
     compile 'org.jcodec:jcodec:0.2.0'
     compile 'org.jcodec:jcodec-android:0.2.0'
     compile 'jp.co.thcomp:android_utility:1.0.22'
+    compile project(':common')
 }
