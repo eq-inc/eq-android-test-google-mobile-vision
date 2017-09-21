@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         minSdkVersion 18
-        targetSdkVersion 26
+        targetSdkVersion 25
         versionCode 1
         versionName "1.0"
 
@@ -22,6 +22,7 @@ android {
 }
 
 repositories {
+    maven { url 'http://raw.github.com/thcomp/Android_BaseActivity/master/repository' }
     maven { url 'http://raw.github.com/thcomp/Android_Utility/master/repository' }
 }
 
@@ -33,6 +34,7 @@ dependencies {
     compile 'com.android.support:appcompat-v7:26.+'
     compile 'com.google.android.gms:play-services-vision:11.0.0'
     compile 'jp.co.thcomp:android_utility:1.0.22'
+    compile 'jp.co.thcomp:android_baseactivity:0.0.2'
     testCompile 'junit:junit:4.12'
     compile project(':common')
 }
