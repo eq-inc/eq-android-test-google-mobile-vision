@@ -4,8 +4,8 @@ import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.opengl.EGL14;
+import android.opengl.EGLContext;
 import android.opengl.EGLDisplay;
-import android.opengl.EGLExt;
 import android.opengl.EGLSurface;
 import android.opengl.GLES20;
 import android.opengl.GLES30;
@@ -146,13 +146,43 @@ public abstract class Accessor {
                                 int[] buffer = new int[frameRect.width() * frameRect.height()];
 
                                 int frameIndex = 0;
+                                int[] bufferTypeArray = {GLES20.GL_FRONT, GLES20.GL_BACK, GLES20.GL_FRONT_AND_BACK, GLES20.GL_FRONT_FACE};
+
+                                EGLContext eglContext = EGL14.eglGetCurrentContext();
+                                Log.d(Accessor.class.getSimpleName(), "eglContext = " + eglContext);
+                                EGLDisplay eglDisplay = EGL14.eglGetCurrentDisplay();
+                                Log.d(Accessor.class.getSimpleName(), "eglDisplay = " + eglDisplay);
+                                EGLSurface eglReadSurface = EGL14.eglGetCurrentSurface(EGL14.EGL_READ);
+                                Log.d(Accessor.class.getSimpleName(), "read eglDisplay = " + eglReadSurface);
+                                EGLSurface eglDrawSurface = EGL14.eglGetCurrentSurface(EGL14.EGL_DRAW);
+                                Log.d(Accessor.class.getSimpleName(), "draw eglDisplay = " + eglDrawSurface);
+
                                 while (mDetectThread != null) {
                                     SparseArray ret = null;
                                     IntBuffer pixelByteBuffer = IntBuffer.wrap(buffer);
-                                    GLES30.glReadBuffer(GLES20.GL_FRONT_FACE);
+                                    pixelByteBuffer.position(0);
+                                    GLES30.glReadBuffer(bufferTypeArray[frameIndex % bufferTypeArray.length]);
+                                    Log.d(Accessor.class.getSimpleName(), "glReadBuffer's error is " + GLES30.glGetError());
                                     GLES30.glReadPixels(0, 0, frameRect.width(), frameRect.height(), GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, pixelByteBuffer);
+                                    Log.d(Accessor.class.getSimpleName(), "glReadPixels's error is " + GLES30.glGetError());
 
                                     int[] frameByteArray = pixelByteBuffer.array();
+                                    Log.d(Accessor.class.getSimpleName(),
+                                            String.format("%s\n0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X\n" +
+                                                            "\t\t\t\t\t\t\t\t\t\t\t\t:\n" +
+                                                            "0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X\n" +
+                                                            "\t\t\t\t\t\t\t\t\t\t\t\t:\n" +
+                                                            "0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X\n",
+                                                    (frameIndex % bufferTypeArray.length == 0 ? "GL_FRONT" : (frameIndex % bufferTypeArray.length == 1 ? "GL_BACK" : (frameIndex % bufferTypeArray.length == 2 ? "GL_FRONT_AND_BACK" : "GL_FRONT_FACE"))),
+                                                    frameByteArray[0], frameByteArray[1], frameByteArray[2], frameByteArray[3], frameByteArray[4], frameByteArray[5], frameByteArray[6], frameByteArray[7],
+                                                    frameByteArray[8], frameByteArray[9], frameByteArray[10], frameByteArray[11], frameByteArray[12], frameByteArray[13], frameByteArray[14], frameByteArray[15],
+
+                                                    frameByteArray[frameByteArray.length / 2 - 8], frameByteArray[frameByteArray.length / 2 - 7], frameByteArray[frameByteArray.length / 2 - 6], frameByteArray[frameByteArray.length / 2 - 5], frameByteArray[frameByteArray.length / 2 - 4], frameByteArray[frameByteArray.length / 2 - 3], frameByteArray[frameByteArray.length / 2 - 2], frameByteArray[frameByteArray.length / 2 - 1],
+                                                    frameByteArray[frameByteArray.length / 2], frameByteArray[frameByteArray.length / 2 + 1], frameByteArray[frameByteArray.length / 2 + 2], frameByteArray[frameByteArray.length / 2 + 3], frameByteArray[frameByteArray.length / 2 + 4], frameByteArray[frameByteArray.length / 2 + 5], frameByteArray[frameByteArray.length / 2 + 6], frameByteArray[frameByteArray.length / 2 + 7],
+
+                                                    frameByteArray[frameByteArray.length - 16], frameByteArray[frameByteArray.length - 15], frameByteArray[frameByteArray.length - 14], frameByteArray[frameByteArray.length - 13], frameByteArray[frameByteArray.length - 12], frameByteArray[frameByteArray.length - 11], frameByteArray[frameByteArray.length - 10], frameByteArray[frameByteArray.length - 9],
+                                                    frameByteArray[frameByteArray.length - 8], frameByteArray[frameByteArray.length - 7], frameByteArray[frameByteArray.length - 6], frameByteArray[frameByteArray.length - 5], frameByteArray[frameByteArray.length - 4], frameByteArray[frameByteArray.length - 3], frameByteArray[frameByteArray.length - 2], frameByteArray[frameByteArray.length - 1]));
+
                                     Bitmap frameBitmap = null;
 
                                     try {
@@ -160,7 +190,7 @@ public abstract class Accessor {
                                         if (frameIndex < 100) {
                                             FileOutputStream fileOutStream = null;
                                             try {
-                                                fileOutStream = new FileOutputStream(String.format("/mnt/sdcard/frame_%04d.png", frameIndex++));
+                                                fileOutStream = new FileOutputStream(String.format("/mnt/sdcard/frame_%04d.png", frameIndex));
                                                 frameBitmap.compress(Bitmap.CompressFormat.PNG, 100, fileOutStream);
                                             } catch (FileNotFoundException e) {
                                                 e.printStackTrace();
@@ -174,6 +204,7 @@ public abstract class Accessor {
                                                 }
                                             }
                                         }
+                                        frameIndex++;
                                         Log.d("", "frameBitmap = " + frameBitmap);
 
                                         Frame.Builder frameBuilder = new Frame.Builder();
