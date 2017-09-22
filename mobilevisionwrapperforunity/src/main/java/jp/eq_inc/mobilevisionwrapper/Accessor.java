@@ -3,12 +3,7 @@ package jp.eq_inc.mobilevisionwrapper;
 import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
-import android.opengl.EGL14;
-import android.opengl.EGLContext;
-import android.opengl.EGLDisplay;
-import android.opengl.EGLSurface;
-import android.opengl.GLES20;
-import android.opengl.GLES30;
+import android.graphics.YuvImage;
 import android.util.Log;
 import android.util.SparseArray;
 import android.view.SurfaceView;
@@ -25,7 +20,7 @@ import com.google.android.gms.vision.text.TextRecognizer;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.IntBuffer;
+import java.nio.ByteBuffer;
 
 import jp.eq_inc.mobilevision.detector.AllDetector;
 
@@ -35,6 +30,11 @@ public abstract class Accessor {
     protected BarcodeDetector.Builder mBarcodeDetectBuilder;
     protected TextRecognizer.Builder mTextRecognizeBuilder;
     protected Thread mDetectThread;
+    protected byte[] mImageBuffer;
+    protected int mImageFormat;
+    protected int mImageWidth;
+    protected int mImageHeight;
+    protected int[] mImageStride;
 
     public static Accessor createAccessorForUnity(Activity activity) {
         return new AccessorForUnity(activity);
@@ -101,6 +101,18 @@ public abstract class Accessor {
         mBarcodeDetectBuilder.setBarcodeFormats(format);
     }
 
+    public void setImageBuffer(byte[] imageBuffer, int imageFormat, int imageWidth, int imageHeight, int[] imageStride) {
+        synchronized (this) {
+            mImageBuffer = imageBuffer;
+            mImageFormat = imageFormat;
+            mImageWidth = imageWidth;
+            mImageHeight = imageHeight;
+            mImageStride = imageStride;
+
+            notify();
+        }
+    }
+
     public interface OnDetectedItemListener {
         void onDetected(SparseArray<Face> result);
     }
@@ -116,127 +128,93 @@ public abstract class Accessor {
                 mDetectThread = new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        View decorView = mActivity.getWindow().getDecorView();
-                        SurfaceView surfaceView = findSurfaceView(decorView);
+                        int detectorTypeCount = AllDetector.DetectorType.values().length;
+                        OnDetectedItemListener[] listenerArray = new OnDetectedItemListener[detectorTypeCount];
+                        Detector[] detectorArray = new Detector[detectorTypeCount];
+                        boolean noDetector = true;
 
-                        if (surfaceView != null) {
-                            int detectorTypeCount = AllDetector.DetectorType.values().length;
-                            OnDetectedItemListener[] listenerArray = new OnDetectedItemListener[detectorTypeCount];
-                            Detector[] detectorArray = new Detector[detectorTypeCount];
-                            boolean noDetector = true;
+                        if (faceDetectListener != null) {
+                            detectorArray[AllDetector.DetectorType.Face.ordinal()] = mFaceDetectBuilder.build();
+                            listenerArray[AllDetector.DetectorType.Face.ordinal()] = faceDetectListener;
+                            noDetector = false;
+                        }
+                        if (barcodeDetectListener != null) {
+                            detectorArray[AllDetector.DetectorType.Barcode.ordinal()] = mBarcodeDetectBuilder.build();
+                            listenerArray[AllDetector.DetectorType.Barcode.ordinal()] = barcodeDetectListener;
+                            noDetector = false;
+                        }
+                        if (textRecognizeListener != null) {
+                            detectorArray[AllDetector.DetectorType.Text.ordinal()] = mTextRecognizeBuilder.build();
+                            listenerArray[AllDetector.DetectorType.Text.ordinal()] = textRecognizeListener;
+                            noDetector = false;
+                        }
 
-                            if (faceDetectListener != null) {
-                                detectorArray[AllDetector.DetectorType.Face.ordinal()] = mFaceDetectBuilder.build();
-                                listenerArray[AllDetector.DetectorType.Face.ordinal()] = faceDetectListener;
-                                noDetector = false;
-                            }
-                            if (barcodeDetectListener != null) {
-                                detectorArray[AllDetector.DetectorType.Barcode.ordinal()] = mBarcodeDetectBuilder.build();
-                                listenerArray[AllDetector.DetectorType.Barcode.ordinal()] = barcodeDetectListener;
-                                noDetector = false;
-                            }
-                            if (textRecognizeListener != null) {
-                                detectorArray[AllDetector.DetectorType.Text.ordinal()] = mTextRecognizeBuilder.build();
-                                listenerArray[AllDetector.DetectorType.Text.ordinal()] = textRecognizeListener;
-                                noDetector = false;
-                            }
+                        if (!noDetector) {
+                            byte[] imageBuffer = null;
+                            int imageFormat = 0;
+                            int imageWidth = 0;
+                            int imageHeight = 0;
+                            int[] imageStride = null;
+                            int frameIndex = 0;
 
-                            if (!noDetector) {
-                                Rect frameRect = surfaceView.getHolder().getSurfaceFrame();
-                                int[] buffer = new int[frameRect.width() * frameRect.height()];
+                            while (mDetectThread != null) {
+                                synchronized (AccessorForUnity.this) {
+                                    if (mImageBuffer == null) {
+                                        try {
+                                            Log.d(AccessorForUnity.class.getSimpleName(), "sleep in");
+                                            AccessorForUnity.this.wait();
+                                            Log.d(AccessorForUnity.class.getSimpleName(), "sleep out");
+                                        } catch (InterruptedException e) {
+                                        }
+                                    }
 
-                                int frameIndex = 0;
-                                int[] bufferTypeArray = {GLES20.GL_FRONT, GLES20.GL_BACK, GLES20.GL_FRONT_AND_BACK, GLES20.GL_FRONT_FACE};
+                                    imageBuffer = mImageBuffer;
+                                    imageFormat = mImageFormat;
+                                    imageWidth = mImageWidth;
+                                    imageHeight = mImageHeight;
+                                    imageStride = mImageStride;
 
-                                EGLContext eglContext = EGL14.eglGetCurrentContext();
-                                Log.d(Accessor.class.getSimpleName(), "eglContext = " + eglContext);
-                                EGLDisplay eglDisplay = EGL14.eglGetCurrentDisplay();
-                                Log.d(Accessor.class.getSimpleName(), "eglDisplay = " + eglDisplay);
-                                EGLSurface eglReadSurface = EGL14.eglGetCurrentSurface(EGL14.EGL_READ);
-                                Log.d(Accessor.class.getSimpleName(), "read eglDisplay = " + eglReadSurface);
-                                EGLSurface eglDrawSurface = EGL14.eglGetCurrentSurface(EGL14.EGL_DRAW);
-                                Log.d(Accessor.class.getSimpleName(), "draw eglDisplay = " + eglDrawSurface);
+                                    mImageBuffer = null;
+                                }
 
-                                while (mDetectThread != null) {
+                                if (imageBuffer != null) {
                                     SparseArray ret = null;
-                                    IntBuffer pixelByteBuffer = IntBuffer.wrap(buffer);
-                                    pixelByteBuffer.position(0);
-                                    GLES30.glReadBuffer(bufferTypeArray[frameIndex % bufferTypeArray.length]);
-                                    Log.d(Accessor.class.getSimpleName(), "glReadBuffer's error is " + GLES30.glGetError());
-                                    GLES30.glReadPixels(0, 0, frameRect.width(), frameRect.height(), GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, pixelByteBuffer);
-                                    Log.d(Accessor.class.getSimpleName(), "glReadPixels's error is " + GLES30.glGetError());
+                                    Frame.Builder frameBuilder = new Frame.Builder();
+                                    frameBuilder.setImageData(ByteBuffer.wrap(imageBuffer), imageWidth, imageHeight, imageFormat);
+                                    Frame frame = frameBuilder.build();
 
-                                    int[] frameByteArray = pixelByteBuffer.array();
-                                    Log.d(Accessor.class.getSimpleName(),
-                                            String.format("%s\n0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X\n" +
-                                                            "\t\t\t\t\t\t\t\t\t\t\t\t:\n" +
-                                                            "0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X\n" +
-                                                            "\t\t\t\t\t\t\t\t\t\t\t\t:\n" +
-                                                            "0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X\n",
-                                                    (frameIndex % bufferTypeArray.length == 0 ? "GL_FRONT" : (frameIndex % bufferTypeArray.length == 1 ? "GL_BACK" : (frameIndex % bufferTypeArray.length == 2 ? "GL_FRONT_AND_BACK" : "GL_FRONT_FACE"))),
-                                                    frameByteArray[0], frameByteArray[1], frameByteArray[2], frameByteArray[3], frameByteArray[4], frameByteArray[5], frameByteArray[6], frameByteArray[7],
-                                                    frameByteArray[8], frameByteArray[9], frameByteArray[10], frameByteArray[11], frameByteArray[12], frameByteArray[13], frameByteArray[14], frameByteArray[15],
+                                    if (frameIndex < 100) {
+                                        YuvImage tempYuvImage = new YuvImage(imageBuffer, imageFormat, imageWidth, imageHeight, imageStride);
 
-                                                    frameByteArray[frameByteArray.length / 2 - 8], frameByteArray[frameByteArray.length / 2 - 7], frameByteArray[frameByteArray.length / 2 - 6], frameByteArray[frameByteArray.length / 2 - 5], frameByteArray[frameByteArray.length / 2 - 4], frameByteArray[frameByteArray.length / 2 - 3], frameByteArray[frameByteArray.length / 2 - 2], frameByteArray[frameByteArray.length / 2 - 1],
-                                                    frameByteArray[frameByteArray.length / 2], frameByteArray[frameByteArray.length / 2 + 1], frameByteArray[frameByteArray.length / 2 + 2], frameByteArray[frameByteArray.length / 2 + 3], frameByteArray[frameByteArray.length / 2 + 4], frameByteArray[frameByteArray.length / 2 + 5], frameByteArray[frameByteArray.length / 2 + 6], frameByteArray[frameByteArray.length / 2 + 7],
+                                        if (tempYuvImage != null) {
+                                            FileOutputStream outStream = null;
 
-                                                    frameByteArray[frameByteArray.length - 16], frameByteArray[frameByteArray.length - 15], frameByteArray[frameByteArray.length - 14], frameByteArray[frameByteArray.length - 13], frameByteArray[frameByteArray.length - 12], frameByteArray[frameByteArray.length - 11], frameByteArray[frameByteArray.length - 10], frameByteArray[frameByteArray.length - 9],
-                                                    frameByteArray[frameByteArray.length - 8], frameByteArray[frameByteArray.length - 7], frameByteArray[frameByteArray.length - 6], frameByteArray[frameByteArray.length - 5], frameByteArray[frameByteArray.length - 4], frameByteArray[frameByteArray.length - 3], frameByteArray[frameByteArray.length - 2], frameByteArray[frameByteArray.length - 1]));
-
-                                    Bitmap frameBitmap = null;
-
-                                    try {
-                                        frameBitmap = Bitmap.createBitmap(frameByteArray, frameRect.width(), frameRect.height(), Bitmap.Config.ARGB_8888);
-                                        if (frameIndex < 100) {
-                                            FileOutputStream fileOutStream = null;
                                             try {
-                                                fileOutStream = new FileOutputStream(String.format("/mnt/sdcard/frame_%04d.png", frameIndex));
-                                                frameBitmap.compress(Bitmap.CompressFormat.PNG, 100, fileOutStream);
+                                                outStream = new FileOutputStream(String.format("/mnt/sdcard/frame_%04d.png", frameIndex));
+                                                tempYuvImage.compressToJpeg(new Rect(0, 0, imageWidth, imageHeight), 100, outStream);
                                             } catch (FileNotFoundException e) {
                                                 e.printStackTrace();
                                             } finally {
-                                                if (fileOutStream != null) {
+                                                if (outStream != null) {
                                                     try {
-                                                        fileOutStream.close();
+                                                        outStream.close();
                                                     } catch (IOException e) {
                                                         e.printStackTrace();
                                                     }
+                                                    outStream = null;
                                                 }
                                             }
                                         }
-                                        frameIndex++;
-                                        Log.d("", "frameBitmap = " + frameBitmap);
-
-                                        Frame.Builder frameBuilder = new Frame.Builder();
-                                        frameBuilder.setBitmap(frameBitmap);
-                                        Frame frame = frameBuilder.build();
-
-                                        for (int i = 0; i < detectorTypeCount; i++) {
-                                            if (detectorArray[i] != null) {
-                                                ret = detectorArray[i].detect(frame);
-                                                listenerArray[i].onDetected(ret);
-                                            }
-                                        }
-                                    } finally {
-                                        if (frameBitmap != null) {
-                                            frameBitmap.recycle();
-                                            frameBitmap = null;
-                                        }
                                     }
 
-                                    synchronized (AccessorForUnity.this) {
-                                        try {
-                                            AccessorForUnity.this.wait(intervalMS);
-                                        } catch (InterruptedException e) {
-                                            e.printStackTrace();
+                                    for (int i = 0; i < detectorTypeCount; i++) {
+                                        if (detectorArray[i] != null) {
+                                            ret = detectorArray[i].detect(frame);
+                                            listenerArray[i].onDetected(ret);
                                         }
                                     }
                                 }
-                            } else {
-                                Log.d(Accessor.class.getSimpleName(), "no listener, finished");
                             }
-                        } else {
-                            Log.e(Accessor.class.getSimpleName(), "not found SurfaceView");
                         }
                     }
                 });
@@ -244,7 +222,6 @@ public abstract class Accessor {
             }
         }
     }
-
 
     public void stopDetect() {
         if (mDetectThread != null) {
