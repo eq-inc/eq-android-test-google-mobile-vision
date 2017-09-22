@@ -1,14 +1,6 @@
 package jp.eq_inc.mobilevisionwrapper;
 
 import android.app.Activity;
-import android.graphics.Bitmap;
-import android.graphics.Rect;
-import android.opengl.EGL14;
-import android.opengl.EGLDisplay;
-import android.opengl.EGLExt;
-import android.opengl.EGLSurface;
-import android.opengl.GLES20;
-import android.opengl.GLES30;
 import android.util.Log;
 import android.util.SparseArray;
 import android.view.SurfaceView;
@@ -22,10 +14,7 @@ import com.google.android.gms.vision.face.Face;
 import com.google.android.gms.vision.face.FaceDetector;
 import com.google.android.gms.vision.text.TextRecognizer;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.IntBuffer;
+import java.nio.ByteBuffer;
 
 import jp.eq_inc.mobilevision.detector.AllDetector;
 
@@ -35,6 +24,11 @@ public abstract class Accessor {
     protected BarcodeDetector.Builder mBarcodeDetectBuilder;
     protected TextRecognizer.Builder mTextRecognizeBuilder;
     protected Thread mDetectThread;
+    protected byte[] mImageBuffer;
+    protected int mImageFormat;
+    protected int mImageWidth;
+    protected int mImageHeight;
+    protected int[] mImageStride;
 
     public static Accessor createAccessorForUnity(Activity activity) {
         return new AccessorForUnity(activity);
@@ -101,6 +95,18 @@ public abstract class Accessor {
         mBarcodeDetectBuilder.setBarcodeFormats(format);
     }
 
+    public void setImageBuffer(byte[] imageBuffer, int imageFormat, int imageWidth, int imageHeight, int[] imageStride) {
+        synchronized (this) {
+            mImageBuffer = imageBuffer;
+            mImageFormat = imageFormat;
+            mImageWidth = imageWidth;
+            mImageHeight = imageHeight;
+            mImageStride = imageStride;
+
+            notify();
+        }
+    }
+
     public interface OnDetectedItemListener {
         void onDetected(SparseArray<Face> result);
     }
@@ -116,68 +122,59 @@ public abstract class Accessor {
                 mDetectThread = new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        View decorView = mActivity.getWindow().getDecorView();
-                        SurfaceView surfaceView = findSurfaceView(decorView);
+                        int detectorTypeCount = AllDetector.DetectorType.values().length;
+                        OnDetectedItemListener[] listenerArray = new OnDetectedItemListener[detectorTypeCount];
+                        Detector[] detectorArray = new Detector[detectorTypeCount];
+                        boolean noDetector = true;
 
-                        if (surfaceView != null) {
-                            int detectorTypeCount = AllDetector.DetectorType.values().length;
-                            OnDetectedItemListener[] listenerArray = new OnDetectedItemListener[detectorTypeCount];
-                            Detector[] detectorArray = new Detector[detectorTypeCount];
-                            boolean noDetector = true;
+                        if (faceDetectListener != null) {
+                            detectorArray[AllDetector.DetectorType.Face.ordinal()] = mFaceDetectBuilder.build();
+                            listenerArray[AllDetector.DetectorType.Face.ordinal()] = faceDetectListener;
+                            noDetector = false;
+                        }
+                        if (barcodeDetectListener != null) {
+                            detectorArray[AllDetector.DetectorType.Barcode.ordinal()] = mBarcodeDetectBuilder.build();
+                            listenerArray[AllDetector.DetectorType.Barcode.ordinal()] = barcodeDetectListener;
+                            noDetector = false;
+                        }
+                        if (textRecognizeListener != null) {
+                            detectorArray[AllDetector.DetectorType.Text.ordinal()] = mTextRecognizeBuilder.build();
+                            listenerArray[AllDetector.DetectorType.Text.ordinal()] = textRecognizeListener;
+                            noDetector = false;
+                        }
 
-                            if (faceDetectListener != null) {
-                                detectorArray[AllDetector.DetectorType.Face.ordinal()] = mFaceDetectBuilder.build();
-                                listenerArray[AllDetector.DetectorType.Face.ordinal()] = faceDetectListener;
-                                noDetector = false;
-                            }
-                            if (barcodeDetectListener != null) {
-                                detectorArray[AllDetector.DetectorType.Barcode.ordinal()] = mBarcodeDetectBuilder.build();
-                                listenerArray[AllDetector.DetectorType.Barcode.ordinal()] = barcodeDetectListener;
-                                noDetector = false;
-                            }
-                            if (textRecognizeListener != null) {
-                                detectorArray[AllDetector.DetectorType.Text.ordinal()] = mTextRecognizeBuilder.build();
-                                listenerArray[AllDetector.DetectorType.Text.ordinal()] = textRecognizeListener;
-                                noDetector = false;
-                            }
+                        if (!noDetector) {
+                            byte[] imageBuffer = null;
+                            int imageFormat = 0;
+                            int imageWidth = 0;
+                            int imageHeight = 0;
+                            int[] imageStride = null;
+                            int frameIndex = 0;
 
-                            if (!noDetector) {
-                                Rect frameRect = surfaceView.getHolder().getSurfaceFrame();
-                                int[] buffer = new int[frameRect.width() * frameRect.height()];
+                            while (mDetectThread != null) {
+                                synchronized (AccessorForUnity.this) {
+                                    if (mImageBuffer == null) {
+                                        try {
+                                            AccessorForUnity.this.wait();
+                                        } catch (InterruptedException e) {
+                                        }
+                                    }
 
-                                int frameIndex = 0;
-                                while (mDetectThread != null) {
+                                    imageBuffer = mImageBuffer;
+                                    imageFormat = mImageFormat;
+                                    imageWidth = mImageWidth;
+                                    imageHeight = mImageHeight;
+                                    imageStride = mImageStride;
+
+                                    mImageBuffer = null;
+                                }
+
+                                if (imageBuffer != null) {
                                     SparseArray ret = null;
-                                    IntBuffer pixelByteBuffer = IntBuffer.wrap(buffer);
-                                    GLES30.glReadBuffer(GLES20.GL_FRONT_FACE);
-                                    GLES30.glReadPixels(0, 0, frameRect.width(), frameRect.height(), GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, pixelByteBuffer);
-
-                                    int[] frameByteArray = pixelByteBuffer.array();
-                                    Bitmap frameBitmap = null;
 
                                     try {
-                                        frameBitmap = Bitmap.createBitmap(frameByteArray, frameRect.width(), frameRect.height(), Bitmap.Config.ARGB_8888);
-                                        if (frameIndex < 100) {
-                                            FileOutputStream fileOutStream = null;
-                                            try {
-                                                fileOutStream = new FileOutputStream(String.format("/mnt/sdcard/frame_%04d.png", frameIndex++));
-                                                frameBitmap.compress(Bitmap.CompressFormat.PNG, 100, fileOutStream);
-                                            } catch (FileNotFoundException e) {
-                                                e.printStackTrace();
-                                            } finally {
-                                                if (fileOutStream != null) {
-                                                    try {
-                                                        fileOutStream.close();
-                                                    } catch (IOException e) {
-                                                        e.printStackTrace();
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        Log.d("", "frameBitmap = " + frameBitmap);
-
                                         Frame.Builder frameBuilder = new Frame.Builder();
-                                        frameBuilder.setBitmap(frameBitmap);
+                                        frameBuilder.setImageData(ByteBuffer.wrap(imageBuffer), imageWidth, imageHeight, imageFormat);
                                         Frame frame = frameBuilder.build();
 
                                         for (int i = 0; i < detectorTypeCount; i++) {
@@ -187,25 +184,12 @@ public abstract class Accessor {
                                             }
                                         }
                                     } finally {
-                                        if (frameBitmap != null) {
-                                            frameBitmap.recycle();
-                                            frameBitmap = null;
-                                        }
+
                                     }
 
-                                    synchronized (AccessorForUnity.this) {
-                                        try {
-                                            AccessorForUnity.this.wait(intervalMS);
-                                        } catch (InterruptedException e) {
-                                            e.printStackTrace();
-                                        }
-                                    }
+                                    frameIndex++;
                                 }
-                            } else {
-                                Log.d(Accessor.class.getSimpleName(), "no listener, finished");
                             }
-                        } else {
-                            Log.e(Accessor.class.getSimpleName(), "not found SurfaceView");
                         }
                     }
                 });
@@ -213,7 +197,6 @@ public abstract class Accessor {
             }
         }
     }
-
 
     public void stopDetect() {
         if (mDetectThread != null) {
