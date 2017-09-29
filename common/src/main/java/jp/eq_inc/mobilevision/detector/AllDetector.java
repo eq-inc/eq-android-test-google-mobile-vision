@@ -1,4 +1,4 @@
-package jp.eq_inc.testmobilevision.detector;
+package jp.eq_inc.mobilevision.detector;
 
 import android.content.Context;
 import android.util.SparseArray;
@@ -46,15 +46,19 @@ public class AllDetector extends Detector {
         SparseArray[] detectedItemsArray = new SparseArray[DetectorType.values().length];
 
         // 全てのDetector/Recognizerにて解析を実施
-        for(int i = 0, size = DetectorType.values().length; i<size; i++){
-            detectedItemsArray[i] = mDetectorArray[i].detect(frame);
+        for (int i = 0, size = DetectorType.values().length; i < size; i++) {
+            if (mDetectorArray[i] != null) {
+                detectedItemsArray[i] = mDetectorArray[i].detect(frame);
+            }
         }
 
-        // 解析結果を1つのSparceArrayに纏めて返却
+        // 解析結果を1つのSparseArrayに纏めて返却
         SparseArray ret = new SparseArray();
-        for(SparseArray detectedItems : detectedItemsArray){
-            for(int i=0, size=detectedItems.size(); i<size; i++){
-                ret.append(detectedItems.keyAt(i), detectedItems.valueAt(i));
+        for (SparseArray detectedItems : detectedItemsArray) {
+            if (detectedItems != null) {
+                for (int i = 0, size = detectedItems.size(); i < size; i++) {
+                    ret.append(detectedItems.keyAt(i), detectedItems.valueAt(i));
+                }
             }
         }
 
@@ -64,8 +68,10 @@ public class AllDetector extends Detector {
     @Override
     public void release() {
         super.release();
-        for (DetectorType detectorType : DetectorType.values()) {
-            mDetectorArray[detectorType.ordinal()].release();
+        for (Detector detector : mDetectorArray) {
+            if (detector != null) {
+                detector.release();
+            }
         }
     }
 
@@ -74,12 +80,13 @@ public class AllDetector extends Detector {
         boolean ret = false;
 
         for (DetectorType detectorType : DetectorType.values()) {
-            Detections detections = mDetectionsArray[detectorType.ordinal()];
+            int ordinal = detectorType.ordinal();
+            Detections detections = mDetectionsArray[ordinal];
 
             if (detections != null) {
                 Object detectedItem = detections.getDetectedItems().get(i, null);
                 if (detectedItem != null) {
-                    ret = mDetectorArray[detectorType.ordinal()].setFocus(i);
+                    ret = mDetectorArray[ordinal].setFocus(i);
                     break;
                 }
             }
@@ -92,8 +99,11 @@ public class AllDetector extends Detector {
     public void setProcessor(Processor processor) {
         // Processorを指定していないと、Detector.receiveFrameにてIllegalStateExceptionが発生するので、必ず設定
         super.setProcessor(processor);
-        for (DetectorType detectorType : DetectorType.values()) {
-            mDetectorArray[detectorType.ordinal()].setProcessor(processor);
+
+        for (Detector detector : mDetectorArray) {
+            if (detector != null) {
+                detector.setProcessor(processor);
+            }
         }
     }
 
@@ -106,6 +116,7 @@ public class AllDetector extends Detector {
         private Boolean mProminentFaceOnly = null;
         private Boolean mTrackingEnabled = null;
         private Integer mBarcodeFormats = null;
+        private boolean[] mDisableDetectorArray = new boolean[DetectorType.values().length];
 
         public Builder(Context context) {
             if (context == null) {
@@ -113,6 +124,14 @@ public class AllDetector extends Detector {
             }
 
             mContext = context;
+        }
+
+        public void enableDetector(DetectorType detectorType, boolean enabled) {
+            mDisableDetectorArray[detectorType.ordinal()] = (!enabled);
+        }
+
+        public boolean isEnableDetector(DetectorType detectorType) {
+            return !mDisableDetectorArray[detectorType.ordinal()];
         }
 
         public Builder setClassificationType(int classificationType) {
@@ -151,32 +170,46 @@ public class AllDetector extends Detector {
         }
 
         public AllDetector build() {
-            FaceDetector.Builder faceDetectorBuilder = new FaceDetector.Builder(mContext);
-            if (mClassificationType != null) {
-                faceDetectorBuilder.setClassificationType(mClassificationType);
-            }
-            if (mLandmarkType != null) {
-                faceDetectorBuilder.setLandmarkType(mLandmarkType);
-            }
-            if (mMinFaceSize != null) {
-                faceDetectorBuilder.setMinFaceSize(mMinFaceSize);
-            }
-            if (mMode != null) {
-                faceDetectorBuilder.setMode(mMode);
-            }
-            if (mProminentFaceOnly != null) {
-                faceDetectorBuilder.setProminentFaceOnly(mProminentFaceOnly);
-            }
-            if (mTrackingEnabled != null) {
-                faceDetectorBuilder.setTrackingEnabled(mTrackingEnabled);
+            FaceDetector.Builder faceDetectorBuilder = null;
+            if (!mDisableDetectorArray[DetectorType.Face.ordinal()]) {
+                faceDetectorBuilder = new FaceDetector.Builder(mContext);
+
+                if (mClassificationType != null) {
+                    faceDetectorBuilder.setClassificationType(mClassificationType);
+                }
+                if (mLandmarkType != null) {
+                    faceDetectorBuilder.setLandmarkType(mLandmarkType);
+                }
+                if (mMinFaceSize != null) {
+                    faceDetectorBuilder.setMinFaceSize(mMinFaceSize);
+                }
+                if (mMode != null) {
+                    faceDetectorBuilder.setMode(mMode);
+                }
+                if (mProminentFaceOnly != null) {
+                    faceDetectorBuilder.setProminentFaceOnly(mProminentFaceOnly);
+                }
+                if (mTrackingEnabled != null) {
+                    faceDetectorBuilder.setTrackingEnabled(mTrackingEnabled);
+                }
             }
 
-            BarcodeDetector.Builder barcodeDetectorBuilder = new BarcodeDetector.Builder(mContext);
-            if (mBarcodeFormats != null) {
-                barcodeDetectorBuilder.setBarcodeFormats(mBarcodeFormats);
+            BarcodeDetector.Builder barcodeDetectorBuilder = null;
+            if (!mDisableDetectorArray[DetectorType.Barcode.ordinal()]) {
+                if (mBarcodeFormats != null) {
+                    barcodeDetectorBuilder = barcodeDetectorBuilder.setBarcodeFormats(mBarcodeFormats);
+                }
             }
 
-            return new AllDetector(faceDetectorBuilder.build(), barcodeDetectorBuilder.build(), new TextRecognizer.Builder(mContext).build());
+            TextRecognizer.Builder textRecognizerBuilder = null;
+            if (!mDisableDetectorArray[DetectorType.Text.ordinal()]) {
+                textRecognizerBuilder = new TextRecognizer.Builder(mContext);
+            }
+
+            return new AllDetector(
+                    faceDetectorBuilder != null ? faceDetectorBuilder.build() : null,
+                    barcodeDetectorBuilder != null ? barcodeDetectorBuilder.build() : null,
+                    textRecognizerBuilder != null ? textRecognizerBuilder.build() : null);
         }
     }
 }

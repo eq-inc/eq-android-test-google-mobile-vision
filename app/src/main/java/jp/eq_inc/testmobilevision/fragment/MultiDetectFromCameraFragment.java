@@ -50,8 +50,8 @@ import java.util.Locale;
 import java.util.Map;
 
 import jp.eq_inc.testmobilevision.R;
-import jp.eq_inc.testmobilevision.detector.AllDetector;
-import jp.eq_inc.testmobilevision.processor.EachFocusingProcessor;
+import jp.eq_inc.mobilevision.detector.AllDetector;
+import jp.eq_inc.mobilevision.processor.EachFocusingProcessor;
 import jp.eq_inc.testmobilevision.view.GraphicOverlay;
 
 public class MultiDetectFromCameraFragment extends AbstractDetectFragment {
