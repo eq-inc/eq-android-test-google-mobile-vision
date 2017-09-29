@@ -42,6 +42,7 @@ import jp.eq_inc.mobilevision.detector.AllDetector;
 
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
 public abstract class Accessor {
+    private static final String EncodeMediaFormat = MediaFormat.MIMETYPE_VIDEO_AVC;
     private static final String ACTION_CONFIRM_VIRTUAL_DISPLAY = "ACTION_CONFIRM_VIRTUAL_DISPLAY";
     private static final int REQUEST_CODE_CONFIRM_VIRTUAL_DISPLAY = "REQUEST_CODE_CONFIRM_VIRTUAL_DISPLAY".hashCode() & 0x0000FFFF;
 
@@ -361,13 +362,13 @@ public abstract class Accessor {
             DisplayMetrics defaultDisplayMetrics = new DisplayMetrics();
             defaultDisplay.getMetrics(defaultDisplayMetrics);
 
-            MediaFormat format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_MPEG4, surfaceFrame.width(), surfaceFrame.height());
+            MediaFormat format = MediaFormat.createVideoFormat(EncodeMediaFormat, surfaceFrame.width(), surfaceFrame.height());
             int frameRate = 1000 / mDetectIntervalMS;
 
             // Set some required properties. The media codec may fail if these aren't defined.
             format.setInteger(MediaFormat.KEY_COLOR_FORMAT,
                     MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
-            format.setInteger(MediaFormat.KEY_BIT_RATE, 6000000); // 6Mbps
+            format.setInteger(MediaFormat.KEY_BIT_RATE, 32 * surfaceFrame.width() * surfaceFrame.height() * frameRate / 100);
             format.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate);
             format.setInteger(MediaFormat.KEY_CAPTURE_RATE, frameRate);
             format.setInteger(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 1000000 / frameRate);
@@ -376,7 +377,7 @@ public abstract class Accessor {
 
             // Create a MediaCodec encoder and configure it. Get a Surface we can use for recording into.
             try {
-                mVideoEncoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_MPEG4);
+                mVideoEncoder = MediaCodec.createEncoderByType(EncodeMediaFormat);
                 mVideoEncoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
                 mInputSurface = mVideoEncoder.createInputSurface();
             } catch (IOException e) {
